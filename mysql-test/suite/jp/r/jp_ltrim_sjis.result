@@ -9,6 +9,8 @@ drop table if exists `Ｔ８`;
 drop table if exists `Ｔ９`;
 SET NAMES sjis;
 SET character_set_database = sjis;
+Warnings:
+Warning	1681	Updating 'character_set_database' is deprecated. It will be made read-only in a future release.
 CREATE TABLE `Ｔ１` (`Ｃ１` char(8), INDEX(`Ｃ１`)) DEFAULT CHARSET = sjis engine = innodb;
 CREATE TABLE `Ｔ２` (`Ｃ１` char(8), INDEX(`Ｃ１`)) DEFAULT CHARSET = sjis engine = innodb;
 CREATE TABLE `Ｔ３` (`Ｃ１` char(8), INDEX(`Ｃ１`)) DEFAULT CHARSET = sjis engine = innodb;
@@ -83,85 +85,85 @@ INSERT INTO `Ｔ９` VALUES ('　　ソ十表予構');
 INSERT INTO `Ｔ９` VALUES ('　　　ソ十表予構');
 SELECT LTRIM(`Ｃ１`) from `Ｔ１`;
 LTRIM(`Ｃ１`)
-ｱｲｳｴｵ
-ｱｲｳｴｵ
-ｱｲｳｴｵ
 　　　ｱｲｳｴｵ
 　　ｱｲｳｴｵ
 　ｱｲｳｴｵ
+ｱｲｳｴｵ
+ｱｲｳｴｵ
+ｱｲｳｴｵ
 ｱｲｳｴｵ
 SELECT LTRIM(`Ｃ１`) from `Ｔ２`;
 LTRIM(`Ｃ１`)
-あいうえお
-あいうえお
-あいうえお
 　　　あいうえお
 　　あいうえお
 　あいうえお
+あいうえお
+あいうえお
+あいうえお
 あいうえお
 SELECT LTRIM(`Ｃ１`) from `Ｔ３`;
 LTRIM(`Ｃ１`)
-ソ十表予構
-ソ十表予構
-ソ十表予構
 　　　ソ十表予構
 　　ソ十表予構
 　ソ十表予構
+ソ十表予構
+ソ十表予構
+ソ十表予構
 ソ十表予構
 SELECT LTRIM(`Ｃ１`) from `Ｔ４`;
 LTRIM(`Ｃ１`)
-ｱｲｳｴｵ
-ｱｲｳｴｵ
-ｱｲｳｴｵ
 　　　ｱｲｳｴｵ
 　　ｱｲｳｴｵ
 　ｱｲｳｴｵ
+ｱｲｳｴｵ
+ｱｲｳｴｵ
+ｱｲｳｴｵ
 ｱｲｳｴｵ
 SELECT LTRIM(`Ｃ１`) from `Ｔ５`;
 LTRIM(`Ｃ１`)
-あいうえお
-あいうえお
-あいうえお
 　　　あいうえお
 　　あいうえお
 　あいうえお
+あいうえお
+あいうえお
+あいうえお
 あいうえお
 SELECT LTRIM(`Ｃ１`) from `Ｔ６`;
 LTRIM(`Ｃ１`)
-ソ十表予構
-ソ十表予構
-ソ十表予構
 　　　ソ十表予構
 　　ソ十表予構
 　ソ十表予構
+ソ十表予構
+ソ十表予構
+ソ十表予構
 ソ十表予構
 SELECT LTRIM(`Ｃ１`) from `Ｔ７`;
 LTRIM(`Ｃ１`)
-ｱｲｳｴｵ
-ｱｲｳｴｵ
-ｱｲｳｴｵ
-ｱｲｳｴｵ
-　ｱｲｳｴｵ
-　　ｱｲｳｴｵ
 　　　ｱｲｳｴｵ
+　　ｱｲｳｴｵ
+　ｱｲｳｴｵ
+ｱｲｳｴｵ
+ｱｲｳｴｵ
+ｱｲｳｴｵ
+ｱｲｳｴｵ
 SELECT LTRIM(`Ｃ１`) from `Ｔ８`;
 LTRIM(`Ｃ１`)
-あいうえお
-あいうえお
-あいうえお
-あいうえお
-　あいうえお
-　　あいうえお
 　　　あいうえお
+　　あいうえお
+　あいうえお
+あいうえお
+あいうえお
+あいうえお
+あいうえお
 SELECT LTRIM(`Ｃ１`) from `Ｔ９`;
 LTRIM(`Ｃ１`)
-ソ十表予構
-ソ十表予構
-ソ十表予構
-ソ十表予構
-　ソ十表予構
-　　ソ十表予構
 　　　ソ十表予構
+　　ソ十表予構
+　ソ十表予構
+ソ十表予構
+ソ十表予構
+ソ十表予構
+ソ十表予構
 DROP TABLE `Ｔ１`;
 DROP TABLE `Ｔ２`;
 DROP TABLE `Ｔ３`;

@@ -2,9 +2,8 @@
 # Testcase for InnoDB
 # Bug#42419 Server crash with "Pure virtual method called" on two concurrent connections
 #
+--source include/hypergraph_is_active.inc
 
---source include/not_embedded.inc
---source include/have_innodb.inc
 
 let $innodb_lock_wait_timeout= query_get_value(SHOW VARIABLES LIKE 'innodb_lock_wait_timeout%', Value, 1);
 if ($innodb_lock_wait_timeout < 10)
@@ -21,8 +20,6 @@ if ($innodb_lock_wait_timeout < 10)
 # First session
 connection default;
 
-
---enable_warnings
 CREATE TABLE t1 (a INT AUTO_INCREMENT PRIMARY KEY, b INT) ENGINE = InnoDB;
 
 INSERT INTO t1 VALUES (1,1),(2,2),(3,3);
@@ -55,6 +52,13 @@ connection default;
 let $show_statement= SHOW PROCESSLIST;
 let $field= State;
 let $condition= = 'Updating';
+if ($hypergraph_is_active) {
+  # The 'Updating' stage is specific to the old optimizer's
+  # single-table UPDATE code path. The hypergraph optimizer uses a
+  # common code path for single-table and multi-table UPDATE, and sees
+  # 'Executing' instead.
+  let $condition = = 'Executing';
+}
 --source include/wait_show_condition.inc
 
 # If the testing box is overloadeded and innodb_lock_wait_timeout is too small

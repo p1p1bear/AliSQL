@@ -1,6 +1,5 @@
---source include/have_ucs2.inc
 --source include/have_ndb.inc
---source suite/ndb_rpl/ndb_master-slave.inc
+--source suite/ndb_rpl/ndb_rpl_init_source_replica.inc
 
 #
 # MySQL Bug#15276: MySQL ignores collation-server
@@ -19,11 +18,8 @@ show variables like 'collation_server';
 #
 #
 show variables like "%character_set_ser%";
---disable_warnings
-DROP TABLE IF EXISTS t1;
---enable_warnings
 
-CREATE TABLE `t1` ( `nid` int(11) NOT NULL default '0',
+CREATE TABLE `t1` ( `nid` int NOT NULL default '0',
                     `nom` char(4) default NULL,
                     `prenom` char(4) default NULL,
                     PRIMARY KEY  (`nid`))
@@ -41,4 +37,4 @@ select * from t1 order by nid;
 connection master;
 DROP TABLE t1;
 sync_slave_with_master;
---source include/rpl_end.inc
+--source include/rpl/deinit.inc

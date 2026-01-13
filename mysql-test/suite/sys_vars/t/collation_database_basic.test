@@ -22,11 +22,6 @@
 #  server-system-variables.html                                               #
 #                                                                             #
 ###############################################################################
---source include/have_big5.inc
---source include/have_ujis.inc
---source include/have_sjis.inc
---source include/have_utf8.inc
---source include/have_ucs2.inc
 
 --source include/load_sysvars.inc
 
@@ -57,18 +52,18 @@ SELECT @session_start_value;
 --error ER_BAD_FIELD_ERROR
 SELECT collation_database;
 # assign value without @@
-SET collation_database=utf8_unicode_ci;
+SET collation_database=utf8mb3_unicode_ci;
 SELECT @@session.collation_database;
 # assign global variable without @@
 --Error ER_PARSE_ERROR
-SET global.collation_database=utf8_unicode_ci;
+SET global.collation_database=utf8mb3_unicode_ci;
 # using another syntax for accessing session variable
-SET session collation_database=utf8_unicode_ci;
+SET session collation_database=utf8mb3_unicode_ci;
 # accessing variable with scope the wrong way
 --Error ER_BAD_FIELD_ERROR
 SELECT session collation_database;
 # using another syntax for accessing dynamic variable
-SET global collation_database=utf8_unicode_ci;
+SET global collation_database=utf8mb3_unicode_ci;
 --Error ER_BAD_FIELD_ERROR
 SELECT global collation_database;
 
@@ -89,11 +84,11 @@ SELECT @@global.collation_database;
 ##############################################################################
 #     see if setting global value changes session value and vice versa       #
 ##############################################################################
-SET @@session.collation_database = utf8_polish_ci;
+SET @@session.collation_database = utf8mb3_polish_ci;
 SELECT @@session.collation_database;
 SET @@global.collation_database = latin7_general_ci;
 SELECT @@global.collation_database;
-SELECT @@session.collation_database AS res_is_utf8_polish_ci;
+SELECT @@session.collation_database AS res_is_utf8mb3_polish_ci;
 
 SET @@session.collation_database = latin7_bin;
 SELECT @@session.collation_database;
@@ -200,6 +195,10 @@ SELECT @@collation_database AS res_with_true;
 
 --Error ER_UNKNOWN_COLLATION
 SET @@collation_database = ON;
+--Error ER_UNKNOWN_COLLATION
+SET @@collation_database = repeat('e', 256);
+--Error ER_UNKNOWN_COLLATION
+SET @@collation_database = repeat('e', 1024);
 
 --echo '#--------------------FN_DYNVARS_016_11-------------------------#'
 ###############################################################################
@@ -224,33 +223,43 @@ SET @@global.collation_database = true;
 
 --Error ER_UNKNOWN_COLLATION
 SET @@global.collation_database = ON;
+--Error ER_UNKNOWN_COLLATION
+SET @@global.collation_database = repeat('e', 256);
+--Error ER_UNKNOWN_COLLATION
+SET @@global.collation_database = repeat('e', 1024);
 
 --echo '#--------------------FN_DYNVARS_016_12-------------------------#'
 ###############################################################################
 #     Check if the value in GLOBAL Table matches value in variable            #
 ###############################################################################
+--disable_warnings
 SELECT @@global.collation_database =
- (SELECT VARIABLE_VALUE FROM INFORMATION_SCHEMA.GLOBAL_VARIABLES
+ (SELECT VARIABLE_VALUE FROM performance_schema.global_variables
   WHERE VARIABLE_NAME='collation_database') AS res;
+--enable_warnings
 SET @@global.collation_database = 1;
 SELECT @@global.collation_database;
+--disable_warnings
 SELECT @@global.collation_database =
- (SELECT VARIABLE_VALUE FROM INFORMATION_SCHEMA.GLOBAL_VARIABLES
+ (SELECT VARIABLE_VALUE FROM performance_schema.global_variables
   WHERE VARIABLE_NAME='collation_database') AS res;
+--enable_warnings
 
 --echo '#--------------------FN_DYNVARS_016_13-------------------------#'
 ##############################################################################
 #     Check if the value in SESSION Table matches value in variable          #
 ##############################################################################
+--disable_warnings
 SELECT @@collation_database =
- (SELECT VARIABLE_VALUE FROM INFORMATION_SCHEMA.SESSION_VARIABLES
+ (SELECT VARIABLE_VALUE FROM performance_schema.session_variables
   WHERE VARIABLE_NAME='collation_database') AS res;
 SELECT @@local.collation_database =
- (SELECT VARIABLE_VALUE FROM INFORMATION_SCHEMA.SESSION_VARIABLES
+ (SELECT VARIABLE_VALUE FROM performance_schema.session_variables
   WHERE VARIABLE_NAME='collation_database') AS res;
 SELECT @@session.collation_database =
- (SELECT VARIABLE_VALUE FROM INFORMATION_SCHEMA.SESSION_VARIABLES
+ (SELECT VARIABLE_VALUE FROM performance_schema.session_variables
   WHERE VARIABLE_NAME='collation_database') AS res;
+--enable_warnings
 
 ####################################
 #     Restore initial value        #

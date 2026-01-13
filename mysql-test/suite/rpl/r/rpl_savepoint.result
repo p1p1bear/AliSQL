@@ -1,7 +1,7 @@
-include/master-slave.inc
+include/rpl/init_source_replica.inc
 Warnings:
 Note	####	Sending passwords in plain text without SSL/TLS is extremely insecure.
-Note	####	Storing MySQL user name or password information in the master info repository is not secure and is therefore not recommended. Please consider using the USER and PASSWORD connection options for START SLAVE; see the 'START SLAVE Syntax' in the MySQL Manual for more information.
+Note	####	Storing MySQL user name or password information in the connection metadata repository is not secure and is therefore not recommended. Please consider using the USER and PASSWORD connection options for START REPLICA; see the 'START REPLICA Syntax' in the MySQL Manual for more information.
 [connection master]
 #
 # Bug#50124 Rpl failure on DROP table with concurrent txn/non-txn
@@ -16,6 +16,8 @@ START TRANSACTION;
 INSERT INTO nt VALUES (1);
 SAVEPOINT insert_statement;
 INSERT INTO tt VALUES (1);
+Warnings:
+Warning	6414	Combining the storage engines InnoDB and MyISAM is deprecated, but the statement or transaction updates both the InnoDB table test.tt and the MyISAM table test.nt.
 # Connection master1
 # Sending:
 DROP TABLE tt;
@@ -29,4 +31,4 @@ COMMIT;
 FLUSH LOGS;
 # Connection master
 DROP TABLE nt;
-include/rpl_end.inc
+include/rpl/deinit.inc

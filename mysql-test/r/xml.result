@@ -634,12 +634,14 @@ Jack
 select extractvalue('<a>Jack</a>','/a[contains(../a,"j")]');
 extractvalue('<a>Jack</a>','/a[contains(../a,"j")]')
 Jack
+set names latin1;
 select extractvalue('<a>Jack</a>','/a[contains(../a,"j")]' collate latin1_bin);
 extractvalue('<a>Jack</a>','/a[contains(../a,"j")]' collate latin1_bin)
 
 select extractvalue('<a>Jack</a>' collate latin1_bin,'/a[contains(../a,"j")]');
 extractvalue('<a>Jack</a>' collate latin1_bin,'/a[contains(../a,"j")]')
 
+set names utf8mb4;
 select ExtractValue('<tag1><![CDATA[test]]></tag1>','/tag1');
 ExtractValue('<tag1><![CDATA[test]]></tag1>','/tag1')
 test
@@ -679,7 +681,9 @@ select extractValue('<e>1</e>','last()');
 ERROR HY000: XPATH syntax error: ''
 select extractValue('<e><a>1</a></e>','/e/');
 ERROR HY000: XPATH syntax error: ''
-set names utf8;
+set names utf8mb3;
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
 select extractValue('<Ñ><r>r</r></Ñ>','/Ñ/r');
 extractValue('<Ñ><r>r</r></Ñ>','/Ñ/r')
 r
@@ -695,9 +699,11 @@ extractValue('<r Ñ="Ñ"/>','/r/@Ñ')
 DROP PROCEDURE IF EXISTS p2;
 CREATE PROCEDURE p2 ()
 BEGIN
-DECLARE p LONGTEXT CHARACTER SET UTF8 DEFAULT '<Ñ><r>A</r></Ñ>';
+DECLARE p LONGTEXT CHARACTER SET utf8mb3 DEFAULT '<Ñ><r>A</r></Ñ>';
 SELECT EXTRACTVALUE(p,'/Ñ/r');
 END//
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
 CALL p2();
 EXTRACTVALUE(p,'/Ñ/r')
 A
@@ -891,6 +897,7 @@ test
 select ExtractValue('<a><self>test</self></a>', '/a/self');
 ExtractValue('<a><self>test</self></a>', '/a/self')
 test
+SET sql_mode = 'NO_ENGINE_SUBSTITUTION';
 set @i=1;
 select ExtractValue('<a><b>b1</b><b>b2</b></a>','/a/b[$@i]');
 ExtractValue('<a><b>b1</b><b>b2</b></a>','/a/b[$@i]')
@@ -948,20 +955,20 @@ SELECT ExtractValue('<a><b>b1</b><b>b2</b></a>','/a/b["1 and string"]');
 ExtractValue('<a><b>b1</b><b>b2</b></a>','/a/b["1 and string"]')
 b1
 Warnings:
-Warning	1292	Truncated incorrect INTEGER value: '1 and string"]'
-Warning	1292	Truncated incorrect INTEGER value: '1 and string"]'
+Warning	1292	Truncated incorrect INTEGER value: '1 and string'
+Warning	1292	Truncated incorrect INTEGER value: '1 and string'
 SELECT ExtractValue('<a><b>b1</b><b>b2</b></a>','/a/b["string and 1"]');
 ExtractValue('<a><b>b1</b><b>b2</b></a>','/a/b["string and 1"]')
 
 Warnings:
-Warning	1292	Truncated incorrect INTEGER value: 'string and 1"]'
-Warning	1292	Truncated incorrect INTEGER value: 'string and 1"]'
+Warning	1292	Truncated incorrect INTEGER value: 'string and 1'
+Warning	1292	Truncated incorrect INTEGER value: 'string and 1'
 SELECT ExtractValue('<a><b>b1</b><b>b2</b></a>','/a/b["string"]');
 ExtractValue('<a><b>b1</b><b>b2</b></a>','/a/b["string"]')
 
 Warnings:
-Warning	1292	Truncated incorrect INTEGER value: 'string"]'
-Warning	1292	Truncated incorrect INTEGER value: 'string"]'
+Warning	1292	Truncated incorrect INTEGER value: 'string'
+Warning	1292	Truncated incorrect INTEGER value: 'string'
 String-to-number conversion from a user variable
 SET @i='1';
 SELECT ExtractValue('<a><b>b1</b><b>b2</b></a>','/a/b[$@i]');
@@ -991,21 +998,22 @@ CALL spxml('<a><b>b1</b><b>b2</b></a>', '1 and string');
 ExtractValue(xml,'/a/b[$i]')
 b1
 Warnings:
-Warning	1292	Truncated incorrect INTEGER value: '1 and string    '
-Warning	1292	Truncated incorrect INTEGER value: '1 and string    '
+Warning	1292	Truncated incorrect INTEGER value: '1 and string'
+Warning	1292	Truncated incorrect INTEGER value: '1 and string'
 CALL spxml('<a><b>b1</b><b>b2</b></a>', 'string and 1');
 ExtractValue(xml,'/a/b[$i]')
 
 Warnings:
-Warning	1292	Truncated incorrect INTEGER value: 'string and 1    '
-Warning	1292	Truncated incorrect INTEGER value: 'string and 1    '
+Warning	1292	Truncated incorrect INTEGER value: 'string and 1'
+Warning	1292	Truncated incorrect INTEGER value: 'string and 1'
 CALL spxml('<a><b>b1</b><b>b2</b></a>', 'string');
 ExtractValue(xml,'/a/b[$i]')
 
 Warnings:
-Warning	1292	Truncated incorrect INTEGER value: 'string          '
-Warning	1292	Truncated incorrect INTEGER value: 'string          '
+Warning	1292	Truncated incorrect INTEGER value: 'string'
+Warning	1292	Truncated incorrect INTEGER value: 'string'
 DROP PROCEDURE spxml;
+SET sql_mode = default;
 select UpdateXML('<a>a</a>',repeat('a b ',1000),'');
 ERROR HY000: XPATH syntax error: 'b a b a b a b a b a b a b a b a '
 select ExtractValue('<a>a</a>', '/a[@x=@y0123456789_0123456789_0123456789_0123456789]');
@@ -1068,7 +1076,9 @@ CREATE TABLE IF NOT EXISTS t1 (
 id int(10) unsigned NOT NULL AUTO_INCREMENT,
 xml text,
 PRIMARY KEY (id)
-) ENGINE=MyISAM;
+);
+Warnings:
+Warning	1681	Integer display width is deprecated and will be removed in a future release.
 INSERT INTO t1 (id, xml) VALUES
 (15, '<?xml version="1.0"?><bla name="blubb"></bla>'),
 (14, '<xml version="kaputt">');
@@ -1096,7 +1106,9 @@ DROP TABLE t1;
 #
 # Bug#57257 Replace(ExtractValue(...)) causes MySQL crash
 #
-SET NAMES utf8;
+SET NAMES utf8mb3;
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
 SELECT REPLACE(EXTRACTVALUE('1', '/a'),'ds','');
 REPLACE(EXTRACTVALUE('1', '/a'),'ds','')
 
@@ -1116,14 +1128,17 @@ ERROR 22007: Illegal double '111111111111111111111111111111111111111111111111111
 #
 # Bug #44332 	my_xml_scan reads behind the end of buffer
 #
-SELECT UPDATEXML(CONVERT(_latin1'<' USING utf8),'1','1');
-UPDATEXML(CONVERT(_latin1'<' USING utf8),'1','1')
+SELECT UPDATEXML(CONVERT(_latin1'<' USING utf8mb3),'1','1');
+UPDATEXML(CONVERT(_latin1'<' USING utf8mb3),'1','1')
 NULL
 Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
 Warning	1525	Incorrect XML value: 'parse error at line 1 pos 2: END-OF-INPUT unexpected (ident or '/' wanted)'
-SELECT UPDATEXML(CONVERT(_latin1'<!--' USING utf8),'1','1');
-UPDATEXML(CONVERT(_latin1'<!--' USING utf8),'1','1')
+SELECT UPDATEXML(CONVERT(_latin1'<!--' USING utf8mb3),'1','1');
+UPDATEXML(CONVERT(_latin1'<!--' USING utf8mb3),'1','1')
 NULL
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
 #
 # Bug#11766725 (bug#59901): EXTRACTVALUE STILL BROKEN AFTER FIX FOR BUG #44332
 #
@@ -1168,9 +1183,13 @@ aa bb
 # Bug#13358486 WEIGHT_STRING = MY_STRNXFRM_UNICODE:
 #              ASSERTION `SRC' FAILED
 #
-set names utf8;
-do weight_string(extractvalue('','/*/a') level 1 reverse);
-do char((weight_string(extractvalue((''),('tX')) level 7 desc)) using cp852);
+set names utf8mb3;
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
+do weight_string(extractvalue('','/*/a'));
+do char((weight_string(extractvalue((''),('tX')))) using cp852);
+Warnings:
+Warning	1292	Truncated incorrect INTEGER value: ''
 set names default;
 #
 # Bug#22552615 EXTRACTVALUE RETURNS NULL WHEN NO MATCHING
@@ -1182,3 +1201,9 @@ select ExtractValue( @x, '/MESSAGE/DATA2' ) into @y;
 select @y;
 @y
 
+#
+# Bug#36236440 Encoding problem in xpath comparision
+#
+SELECT EXTRACTVALUE('<A><B>èè</B><C>AA</C></A>', '/A[B = "èè"]/C');
+EXTRACTVALUE('<A><B>èè</B><C>AA</C></A>', '/A[B = "èè"]/C')
+AA

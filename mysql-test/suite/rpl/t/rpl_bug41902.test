@@ -2,14 +2,15 @@
 #                     in face of an error
 #
 
+--source include/not_group_replication_plugin.inc
 source include/have_debug.inc;
-source include/master-slave.inc;
+source include/rpl/init_source_replica.inc;
 
 -- disable_query_log
 CALL mtr.add_suppression("Failed to locate old binlog or relay log files");
 CALL mtr.add_suppression('MYSQL_BIN_LOG::purge_logs was called with file ..master-bin.000001 not listed in the index.');
 -- enable_query_log
---source include/sync_slave_sql_with_master.inc
+--source include/rpl/sync_to_replica.inc
 
 #
 # test checks that 
@@ -20,44 +21,59 @@ CALL mtr.add_suppression('MYSQL_BIN_LOG::purge_logs was called with file ..maste
 #
 
 connection slave;
-stop slave;
+STOP REPLICA;
 
-SET @@debug="d,simulate_find_log_pos_error";
+--let $debug_point= simulate_find_log_pos_error
+--source include/add_debug_point.inc
 
 --error ER_UNKNOWN_TARGET_BINLOG
-reset slave;
+RESET REPLICA;
 show warnings;
 
-SET @@debug="";
-reset slave;
-change master to master_host='dummy';
+--let $debug_point= simulate_find_log_pos_error
+--source include/remove_debug_point.inc
 
-SET @@debug="d,simulate_find_log_pos_error";
+RESET REPLICA;
+CHANGE REPLICATION SOURCE to SOURCE_HOST='dummy';
+
+--let $debug_point= simulate_find_log_pos_error
+--source include/add_debug_point.inc
 
 --error ER_UNKNOWN_TARGET_BINLOG
-change master to master_host='dummy';
+CHANGE REPLICATION SOURCE to SOURCE_HOST='dummy';
 
-SET @@debug="";
-reset slave;
-change master to master_host='dummy';
+--let $debug_point= simulate_find_log_pos_error
+--source include/remove_debug_point.inc
+
+RESET REPLICA;
+CHANGE REPLICATION SOURCE to SOURCE_HOST='dummy';
 
 connection master;
-SET @@debug="d,simulate_find_log_pos_error";
+
+--let $debug_point= simulate_find_log_pos_error
+--source include/add_debug_point.inc
+
 --error ER_UNKNOWN_TARGET_BINLOG
-reset master;
+reset binary logs and gtids;
 
-SET @@debug="";
-reset master;
+--let $debug_point= simulate_find_log_pos_error
+--source include/remove_debug_point.inc
 
-SET @@debug="d,simulate_find_log_pos_error";
+reset binary logs and gtids;
+
+--let $debug_point= simulate_find_log_pos_error
+--source include/add_debug_point.inc
+
 --error ER_UNKNOWN_TARGET_BINLOG
 purge binary logs to 'master-bin.000001';
 
-SET @@debug="";
+--let $debug_point= simulate_find_log_pos_error
+--source include/remove_debug_point.inc
+
 purge binary logs to 'master-bin.000001';
 
 --echo ==== clean up ====
 --connection slave
-CHANGE MASTER TO MASTER_HOST = '127.0.0.1';
+CHANGE REPLICATION SOURCE TO SOURCE_HOST = '127.0.0.1';
 --let $rpl_only_running_threads= 1
---source include/rpl_end.inc
+--source include/rpl/deinit.inc

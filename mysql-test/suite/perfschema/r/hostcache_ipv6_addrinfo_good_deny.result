@@ -1,7 +1,9 @@
 flush status;
-flush hosts;
+TRUNCATE TABLE performance_schema.host_cache;
 flush user_resources;
 flush privileges;
+Warnings:
+Warning	1681	'FLUSH PRIVILEGES' is deprecated and will be removed in a future release.
 select @@global.debug;
 @@global.debug
 

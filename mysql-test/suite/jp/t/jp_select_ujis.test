@@ -1,6 +1,4 @@
---source include/have_ujis.inc
---source include/have_innodb.inc
-
+--character_set ujis
 --disable_warnings
 drop table if exists `£Ô£±`;
 drop table if exists `£Ô£²`;
@@ -46,16 +44,25 @@ LOAD DATA LOCAL INFILE 'suite/jp/std_data/jisx0208_ujis.dat' INTO TABLE `£Ô£¸`;
 LOAD DATA LOCAL INFILE 'suite/jp/std_data/jisx0212_ujis.dat' INTO TABLE `£Ô£¹`;
 
 #InnoDB
+--sorted_result
 SELECT * FROM `£Ô£±`;
+--sorted_result
 SELECT * FROM `£Ô£²`;
+--sorted_result
 SELECT * FROM `£Ô£³`;
 #MyISAM
+--sorted_result
 SELECT * FROM `£Ô£´`;
+--sorted_result
 SELECT * FROM `£Ô£µ`;
+--sorted_result
 SELECT * FROM `£Ô£¶`;
 #MEMORY
+--sorted_result
 SELECT * FROM `£Ô£·`;
+--sorted_result
 SELECT * FROM `£Ô£¸`;
+--sorted_result
 SELECT * FROM `£Ô£¹`;
 
 drop table `£Ô£±`;

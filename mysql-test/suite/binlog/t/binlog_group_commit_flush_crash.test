@@ -7,11 +7,9 @@
 # a transaction can be recovered during server recovery from
 # a crash, which happened after flushing it to binary log.
 #
---source include/not_embedded.inc
 --source include/not_valgrind.inc
 --source include/have_log_bin.inc
 -- source include/have_debug.inc
--- source include/have_innodb.inc
 
 CREATE TABLE t1(c1 INT) ENGINE= InnoDB;
 
@@ -25,11 +23,9 @@ INSERT INTO t1 VALUES(1);
 COMMIT;
 --source include/wait_until_disconnected.inc
 
---enable_reconnect
 --echo # Restart the master server
 --exec echo "restart" > $MYSQLTEST_VARDIR/tmp/mysqld.1.expect
 --source include/wait_until_connected_again.inc
---disable_reconnect
 
 --echo #
 --echo # Verify that a transaction can not be recovered during server
@@ -50,11 +46,9 @@ INSERT INTO t1 VALUES(2);
 COMMIT;
 --source include/wait_until_disconnected.inc
 
---enable_reconnect
 --echo # Restart the master server
 --exec echo "restart" > $MYSQLTEST_VARDIR/tmp/mysqld.1.expect
 --source include/wait_until_connected_again.inc
---disable_reconnect
 
 --echo #
 --echo # Verify that a transaction can be recovered during server

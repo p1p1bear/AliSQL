@@ -1,11 +1,7 @@
--- source include/have_sjis.inc
-
 #
 # Tests with the sjis character set
 #
---disable_warnings
-drop table if exists t1;
---enable_warnings
+--source include/no_valgrind_without_big.inc
 
 set names sjis;
 
@@ -18,10 +14,10 @@ set @sjis2= _sjis 0xb0b1b2b3b4b5b6b7b8b9babbbcbdbebf;
 set @sjis3= _sjis 0xc0c1c2c3c4c5c6c7c8c9cacbcccdcecf;
 set @sjis4= _sjis 0xd0d1d2d3d4d5d6d7d8d9dadbdcdddedf;
 
-set @utf81= CONVERT(@sjis1 USING utf8);
-set @utf82= CONVERT(@sjis2 USING utf8);
-set @utf83= CONVERT(@sjis3 USING utf8);
-set @utf84= CONVERT(@sjis4 USING utf8);
+set @utf81= CONVERT(@sjis1 USING utf8mb3);
+set @utf82= CONVERT(@sjis2 USING utf8mb3);
+set @utf83= CONVERT(@sjis3 USING utf8mb3);
+set @utf84= CONVERT(@sjis4 USING utf8mb3);
 
 select hex(@utf81);
 select hex(@utf82);
@@ -39,6 +35,7 @@ select hex(CONVERT(@utf84 USING sjis));
 #
 create table t1 (a char(10) character set sjis);
 insert into t1 values (0x878A);
+--sorted_result
 select hex(a) from t1;
 drop table t1;
 
@@ -58,7 +55,7 @@ drop table t1;
 SET NAMES sjis;
 CREATE TABLE t1 (
  c char(16) default NULL
-) ENGINE=MyISAM DEFAULT CHARSET=sjis;
+) DEFAULT CHARSET=sjis;
 insert into t1 values(0xb1),(0xb2),(0xb3);
 select hex(c) from t1;
 drop table t1;
@@ -113,7 +110,7 @@ SELECT QUOTE('ƒ\');
 #
 # Populate t1 with all hex digits
 #
-SET NAMES utf8;
+SET NAMES utf8mb3;
 SET collation_connection=sjis_japanese_ci;
 CREATE TABLE t1 (b VARCHAR(2));
 INSERT INTO t1 VALUES ('0'),('1'),('2'),('3'),('4'),('5'),('6'),('7');
@@ -142,7 +139,10 @@ ORDER BY head, tail;
 INSERT t1 (code) SELECT head FROM head WHERE (head BETWEEN 'A1' AND 'DF');
 DROP TEMPORARY TABLE head, tail;
 SHOW CREATE TABLE t1;
-UPDATE t1 SET a=unhex(code) ORDER BY code;
+# Set max_error_count to contain number of warnings in result file.
+SET @@session.max_error_count = 64;
+UPDATE IGNORE t1 SET a=unhex(code) ORDER BY code;
+SET @@session.max_error_count = DEFAULT;
 SELECT COUNT(*) FROM t1;
 SELECT COUNT(*) FROM t1 WHERE a<>'' AND OCTET_LENGTH(a)=1;
 SELECT COUNT(*) FROM t1 WHERE a<>'' AND OCTET_LENGTH(a)=2;
@@ -159,20 +159,20 @@ ORDER BY code;
 # Expect U+212B ANGSTROM SIGN
 #
 SELECT * FROM t1
-WHERE HEX(CAST(LOWER(a) AS CHAR CHARACTER SET utf8)) <>
-      HEX(LOWER(CAST(a AS CHAR CHARACTER SET utf8))) ORDER BY code;
+WHERE HEX(CAST(LOWER(a) AS CHAR CHARACTER SET utf8mb3)) <>
+      HEX(LOWER(CAST(a AS CHAR CHARACTER SET utf8mb3))) ORDER BY code;
 #
 # Expect no results
 #
 SELECT * FROM t1
-WHERE HEX(CAST(UPPER(a) AS CHAR CHARACTER SET utf8)) <>
-      HEX(UPPER(CAST(a AS CHAR CHARACTER SET utf8))) ORDER BY code;
+WHERE HEX(CAST(UPPER(a) AS CHAR CHARACTER SET utf8mb3)) <>
+      HEX(UPPER(CAST(a AS CHAR CHARACTER SET utf8mb3))) ORDER BY code;
 
 --echo #
 --echo # WL#3090 Japanese Character Set adjustments
 --echo # Test sjis->Unicode conversion
 --echo #
-SELECT HEX(a), HEX(CONVERT(a USING utf8)) as b FROM t1
+SELECT HEX(a), HEX(CONVERT(a USING utf8mb3)) as b FROM t1
 WHERE a<>'' HAVING b<>'3F' ORDER BY code;
 
 DROP TABLE t1;
@@ -202,13 +202,11 @@ DROP TABLE t1;
 
 set names sjis;
 --source include/weight_string.inc
---source include/weight_string_l1.inc
 --source include/weight_string_8140.inc
 
 
 set collation_connection=sjis_bin;
 --source include/weight_string.inc
---source include/weight_string_l1.inc
 --source include/weight_string_8140.inc
 
 --echo #

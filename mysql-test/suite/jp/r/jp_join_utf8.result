@@ -16,26 +16,67 @@ drop table if exists `Ｔ８a`;
 drop table if exists `Ｔ８b`;
 drop table if exists `Ｔ９a`;
 drop table if exists `Ｔ９b`;
-SET NAMES utf8;
-SET character_set_database = utf8;
-CREATE TABLE `Ｔ１a` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8 engine = InnoDB;
-CREATE TABLE `Ｔ１b` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8 engine = InnoDB;
-CREATE TABLE `Ｔ２a` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8 engine = InnoDB;
-CREATE TABLE `Ｔ２b` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8 engine = InnoDB;
-CREATE TABLE `Ｔ３a` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8 engine = InnoDB;
-CREATE TABLE `Ｔ３b` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8 engine = InnoDB;
-CREATE TABLE `Ｔ４a` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8 engine = MyISAM;
-CREATE TABLE `Ｔ４b` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8 engine = MyISAM;
-CREATE TABLE `Ｔ５a` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8 engine = MyISAM;
-CREATE TABLE `Ｔ５b` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8 engine = MyISAM;
-CREATE TABLE `Ｔ６a` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8 engine = MyISAM;
-CREATE TABLE `Ｔ６b` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8 engine = MyISAM;
-CREATE TABLE `Ｔ７a` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8 engine = MEMORY;
-CREATE TABLE `Ｔ７b` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8 engine = MEMORY;
-CREATE TABLE `Ｔ８a` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8 engine = MEMORY;
-CREATE TABLE `Ｔ８b` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8 engine = MEMORY;
-CREATE TABLE `Ｔ９a` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8 engine = MEMORY;
-CREATE TABLE `Ｔ９b` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8 engine = MEMORY;
+SET NAMES utf8mb3;
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
+SET character_set_database = utf8mb3;
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
+Warning	1681	Updating 'character_set_database' is deprecated. It will be made read-only in a future release.
+CREATE TABLE `Ｔ１a` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8mb3 engine = InnoDB;
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
+CREATE TABLE `Ｔ１b` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8mb3 engine = InnoDB;
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
+CREATE TABLE `Ｔ２a` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8mb3 engine = InnoDB;
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
+CREATE TABLE `Ｔ２b` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8mb3 engine = InnoDB;
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
+CREATE TABLE `Ｔ３a` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8mb3 engine = InnoDB;
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
+CREATE TABLE `Ｔ３b` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8mb3 engine = InnoDB;
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
+CREATE TABLE `Ｔ４a` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8mb3 engine = MyISAM;
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
+CREATE TABLE `Ｔ４b` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8mb3 engine = MyISAM;
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
+CREATE TABLE `Ｔ５a` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8mb3 engine = MyISAM;
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
+CREATE TABLE `Ｔ５b` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8mb3 engine = MyISAM;
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
+CREATE TABLE `Ｔ６a` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8mb3 engine = MyISAM;
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
+CREATE TABLE `Ｔ６b` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8mb3 engine = MyISAM;
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
+CREATE TABLE `Ｔ７a` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8mb3 engine = MEMORY;
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
+CREATE TABLE `Ｔ７b` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8mb3 engine = MEMORY;
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
+CREATE TABLE `Ｔ８a` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8mb3 engine = MEMORY;
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
+CREATE TABLE `Ｔ８b` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8mb3 engine = MEMORY;
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
+CREATE TABLE `Ｔ９a` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8mb3 engine = MEMORY;
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
+CREATE TABLE `Ｔ９b` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8mb3 engine = MEMORY;
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
 INSERT INTO `Ｔ１a` VALUES ('ｱ'),('ｶ'),('ｻ');
 INSERT INTO `Ｔ１b` VALUES ('ｱ');
 INSERT INTO `Ｔ２a` VALUES ('あ'),('か'),('さ');

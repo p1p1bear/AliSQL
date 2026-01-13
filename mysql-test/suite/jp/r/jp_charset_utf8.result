@@ -7,17 +7,40 @@ drop table if exists `Ｔ６`;
 drop table if exists `Ｔ７`;
 drop table if exists `Ｔ８`;
 drop table if exists `Ｔ９`;
-SET NAMES utf8;
-SET character_set_database = utf8;
-CREATE TABLE `Ｔ１` (`Ｃ１` char(20)) DEFAULT CHARSET = utf8 engine = innodb;
-CREATE TABLE `Ｔ２` (`Ｃ１` char(20)) DEFAULT CHARSET = utf8 engine = innodb;
-CREATE TABLE `Ｔ３` (`Ｃ１` char(20)) DEFAULT CHARSET = utf8 engine = innodb;
-CREATE TABLE `Ｔ４` (`Ｃ１` char(20)) DEFAULT CHARSET = utf8 engine = myisam;
-CREATE TABLE `Ｔ５` (`Ｃ１` char(20)) DEFAULT CHARSET = utf8 engine = myisam;
-CREATE TABLE `Ｔ６` (`Ｃ１` char(20)) DEFAULT CHARSET = utf8 engine = myisam;
-CREATE TABLE `Ｔ７` (`Ｃ１` char(20)) DEFAULT CHARSET = utf8 engine = MEMORY;
-CREATE TABLE `Ｔ８` (`Ｃ１` char(20)) DEFAULT CHARSET = utf8 engine = MEMORY;
-CREATE TABLE `Ｔ９` (`Ｃ１` char(20)) DEFAULT CHARSET = utf8 engine = MEMORY;
+SET NAMES utf8mb3;
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
+SET character_set_database = utf8mb3;
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
+Warning	1681	Updating 'character_set_database' is deprecated. It will be made read-only in a future release.
+CREATE TABLE `Ｔ１` (`Ｃ１` char(20)) DEFAULT CHARSET = utf8mb3 engine = innodb;
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
+CREATE TABLE `Ｔ２` (`Ｃ１` char(20)) DEFAULT CHARSET = utf8mb3 engine = innodb;
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
+CREATE TABLE `Ｔ３` (`Ｃ１` char(20)) DEFAULT CHARSET = utf8mb3 engine = innodb;
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
+CREATE TABLE `Ｔ４` (`Ｃ１` char(20)) DEFAULT CHARSET = utf8mb3 engine = myisam;
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
+CREATE TABLE `Ｔ５` (`Ｃ１` char(20)) DEFAULT CHARSET = utf8mb3 engine = myisam;
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
+CREATE TABLE `Ｔ６` (`Ｃ１` char(20)) DEFAULT CHARSET = utf8mb3 engine = myisam;
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
+CREATE TABLE `Ｔ７` (`Ｃ１` char(20)) DEFAULT CHARSET = utf8mb3 engine = MEMORY;
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
+CREATE TABLE `Ｔ８` (`Ｃ１` char(20)) DEFAULT CHARSET = utf8mb3 engine = MEMORY;
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
+CREATE TABLE `Ｔ９` (`Ｃ１` char(20)) DEFAULT CHARSET = utf8mb3 engine = MEMORY;
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
 LOAD DATA LOCAL INFILE 'suite/jp/std_data/jisx0201_utf8.dat' INTO TABLE `Ｔ１`;
 LOAD DATA LOCAL INFILE 'suite/jp/std_data/jisx0208_utf8.dat' INTO TABLE `Ｔ２`;
 LOAD DATA LOCAL INFILE 'suite/jp/std_data/jisx0212_utf8.dat' INTO TABLE `Ｔ３`;
@@ -29,43 +52,55 @@ LOAD DATA LOCAL INFILE 'suite/jp/std_data/jisx0208_utf8.dat' INTO TABLE `Ｔ８`
 LOAD DATA LOCAL INFILE 'suite/jp/std_data/jisx0212_utf8.dat' INTO TABLE `Ｔ９`;
 SELECT DISTINCT CHARSET(`Ｃ１`) FROM `Ｔ１`;
 CHARSET(`Ｃ１`)
-utf8
+utf8mb3
 SELECT DISTINCT CHARSET(`Ｃ１`) FROM `Ｔ２`;
 CHARSET(`Ｃ１`)
-utf8
+utf8mb3
 SELECT DISTINCT CHARSET(`Ｃ１`) FROM `Ｔ３`;
 CHARSET(`Ｃ１`)
-utf8
-SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING utf8)) FROM `Ｔ１`;
-CHARSET(CONVERT(`Ｃ１` USING utf8))
-utf8
+utf8mb3
+SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING utf8mb3)) FROM `Ｔ１`;
+CHARSET(CONVERT(`Ｃ１` USING utf8mb3))
+utf8mb3
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
 SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING ucs2)) FROM `Ｔ１`;
 CHARSET(CONVERT(`Ｃ１` USING ucs2))
 ucs2
+Warnings:
+Warning	1287	'ucs2' is deprecated and will be removed in a future release. Please use utf8mb4 instead
 SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING sjis)) FROM `Ｔ１`;
 CHARSET(CONVERT(`Ｃ１` USING sjis))
 sjis
 SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING ujis)) FROM `Ｔ１`;
 CHARSET(CONVERT(`Ｃ１` USING ujis))
 ujis
-SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING utf8)) FROM `Ｔ２`;
-CHARSET(CONVERT(`Ｃ１` USING utf8))
-utf8
+SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING utf8mb3)) FROM `Ｔ２`;
+CHARSET(CONVERT(`Ｃ１` USING utf8mb3))
+utf8mb3
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
 SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING ucs2)) FROM `Ｔ２`;
 CHARSET(CONVERT(`Ｃ１` USING ucs2))
 ucs2
+Warnings:
+Warning	1287	'ucs2' is deprecated and will be removed in a future release. Please use utf8mb4 instead
 SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING sjis)) FROM `Ｔ２`;
 CHARSET(CONVERT(`Ｃ１` USING sjis))
 sjis
 SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING ujis)) FROM `Ｔ２`;
 CHARSET(CONVERT(`Ｃ１` USING ujis))
 ujis
-SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING utf8)) FROM `Ｔ３`;
-CHARSET(CONVERT(`Ｃ１` USING utf8))
-utf8
+SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING utf8mb3)) FROM `Ｔ３`;
+CHARSET(CONVERT(`Ｃ１` USING utf8mb3))
+utf8mb3
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
 SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING ucs2)) FROM `Ｔ３`;
 CHARSET(CONVERT(`Ｃ１` USING ucs2))
 ucs2
+Warnings:
+Warning	1287	'ucs2' is deprecated and will be removed in a future release. Please use utf8mb4 instead
 SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING sjis)) FROM `Ｔ３`;
 CHARSET(CONVERT(`Ｃ１` USING sjis))
 sjis
@@ -74,43 +109,55 @@ CHARSET(CONVERT(`Ｃ１` USING ujis))
 ujis
 SELECT DISTINCT CHARSET(`Ｃ１`) FROM `Ｔ４`;
 CHARSET(`Ｃ１`)
-utf8
+utf8mb3
 SELECT DISTINCT CHARSET(`Ｃ１`) FROM `Ｔ５`;
 CHARSET(`Ｃ１`)
-utf8
+utf8mb3
 SELECT DISTINCT CHARSET(`Ｃ１`) FROM `Ｔ６`;
 CHARSET(`Ｃ１`)
-utf8
-SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING utf8)) FROM `Ｔ４`;
-CHARSET(CONVERT(`Ｃ１` USING utf8))
-utf8
+utf8mb3
+SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING utf8mb3)) FROM `Ｔ４`;
+CHARSET(CONVERT(`Ｃ１` USING utf8mb3))
+utf8mb3
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
 SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING ucs2)) FROM `Ｔ４`;
 CHARSET(CONVERT(`Ｃ１` USING ucs2))
 ucs2
+Warnings:
+Warning	1287	'ucs2' is deprecated and will be removed in a future release. Please use utf8mb4 instead
 SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING sjis)) FROM `Ｔ４`;
 CHARSET(CONVERT(`Ｃ１` USING sjis))
 sjis
 SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING ujis)) FROM `Ｔ４`;
 CHARSET(CONVERT(`Ｃ１` USING ujis))
 ujis
-SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING utf8)) FROM `Ｔ５`;
-CHARSET(CONVERT(`Ｃ１` USING utf8))
-utf8
+SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING utf8mb3)) FROM `Ｔ５`;
+CHARSET(CONVERT(`Ｃ１` USING utf8mb3))
+utf8mb3
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
 SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING ucs2)) FROM `Ｔ５`;
 CHARSET(CONVERT(`Ｃ１` USING ucs2))
 ucs2
+Warnings:
+Warning	1287	'ucs2' is deprecated and will be removed in a future release. Please use utf8mb4 instead
 SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING sjis)) FROM `Ｔ５`;
 CHARSET(CONVERT(`Ｃ１` USING sjis))
 sjis
 SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING ujis)) FROM `Ｔ５`;
 CHARSET(CONVERT(`Ｃ１` USING ujis))
 ujis
-SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING utf8)) FROM `Ｔ６`;
-CHARSET(CONVERT(`Ｃ１` USING utf8))
-utf8
+SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING utf8mb3)) FROM `Ｔ６`;
+CHARSET(CONVERT(`Ｃ１` USING utf8mb3))
+utf8mb3
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
 SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING ucs2)) FROM `Ｔ６`;
 CHARSET(CONVERT(`Ｃ１` USING ucs2))
 ucs2
+Warnings:
+Warning	1287	'ucs2' is deprecated and will be removed in a future release. Please use utf8mb4 instead
 SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING sjis)) FROM `Ｔ６`;
 CHARSET(CONVERT(`Ｃ１` USING sjis))
 sjis
@@ -119,43 +166,55 @@ CHARSET(CONVERT(`Ｃ１` USING ujis))
 ujis
 SELECT DISTINCT CHARSET(`Ｃ１`) FROM `Ｔ７`;
 CHARSET(`Ｃ１`)
-utf8
+utf8mb3
 SELECT DISTINCT CHARSET(`Ｃ１`) FROM `Ｔ８`;
 CHARSET(`Ｃ１`)
-utf8
+utf8mb3
 SELECT DISTINCT CHARSET(`Ｃ１`) FROM `Ｔ９`;
 CHARSET(`Ｃ１`)
-utf8
-SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING utf8)) FROM `Ｔ７`;
-CHARSET(CONVERT(`Ｃ１` USING utf8))
-utf8
+utf8mb3
+SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING utf8mb3)) FROM `Ｔ７`;
+CHARSET(CONVERT(`Ｃ１` USING utf8mb3))
+utf8mb3
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
 SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING ucs2)) FROM `Ｔ７`;
 CHARSET(CONVERT(`Ｃ１` USING ucs2))
 ucs2
+Warnings:
+Warning	1287	'ucs2' is deprecated and will be removed in a future release. Please use utf8mb4 instead
 SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING sjis)) FROM `Ｔ７`;
 CHARSET(CONVERT(`Ｃ１` USING sjis))
 sjis
 SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING ujis)) FROM `Ｔ７`;
 CHARSET(CONVERT(`Ｃ１` USING ujis))
 ujis
-SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING utf8)) FROM `Ｔ８`;
-CHARSET(CONVERT(`Ｃ１` USING utf8))
-utf8
+SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING utf8mb3)) FROM `Ｔ８`;
+CHARSET(CONVERT(`Ｃ１` USING utf8mb3))
+utf8mb3
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
 SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING ucs2)) FROM `Ｔ８`;
 CHARSET(CONVERT(`Ｃ１` USING ucs2))
 ucs2
+Warnings:
+Warning	1287	'ucs2' is deprecated and will be removed in a future release. Please use utf8mb4 instead
 SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING sjis)) FROM `Ｔ８`;
 CHARSET(CONVERT(`Ｃ１` USING sjis))
 sjis
 SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING ujis)) FROM `Ｔ８`;
 CHARSET(CONVERT(`Ｃ１` USING ujis))
 ujis
-SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING utf8)) FROM `Ｔ９`;
-CHARSET(CONVERT(`Ｃ１` USING utf8))
-utf8
+SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING utf8mb3)) FROM `Ｔ９`;
+CHARSET(CONVERT(`Ｃ１` USING utf8mb3))
+utf8mb3
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
 SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING ucs2)) FROM `Ｔ９`;
 CHARSET(CONVERT(`Ｃ１` USING ucs2))
 ucs2
+Warnings:
+Warning	1287	'ucs2' is deprecated and will be removed in a future release. Please use utf8mb4 instead
 SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING sjis)) FROM `Ｔ９`;
 CHARSET(CONVERT(`Ｃ１` USING sjis))
 sjis

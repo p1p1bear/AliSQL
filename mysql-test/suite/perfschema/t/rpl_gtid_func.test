@@ -1,8 +1,7 @@
---source include/not_embedded.inc
---source include/have_perfschema.inc
+# Test requires: sp-protocol/ps-protocol/view-protocol/cursor-protocol disabled
 --source include/no_protocol.inc
 
--- source include/master-slave.inc
+-- source include/rpl/init_source_replica.inc
 
 connection master;
 --echo **** On Master ****
@@ -34,7 +33,7 @@ connection master;
 --echo **** On Master ****
 
 select * from performance_schema.setup_instruments
-  where timed='NO';
+  where timed='NO' and name not like "memory/%";
 
 select "This better be in the master" as in_master_digest;
 
@@ -88,4 +87,4 @@ drop table test.marker;
 sync_slave_with_master;
 --enable_warnings
 --enable_query_log
---source include/rpl_end.inc
+--source include/rpl/deinit.inc

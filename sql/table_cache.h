@@ -1,24 +1,60 @@
-/* Copyright (c) 2012, Oracle and/or its affiliates. All rights reserved.
+/* Copyright (c) 2012, 2025, Oracle and/or its affiliates.
 
    This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; version 2 of the License.
+   it under the terms of the GNU General Public License, version 2.0,
+   as published by the Free Software Foundation.
+
+   This program is designed to work with certain software (including
+   but not limited to OpenSSL) that is licensed under separate terms,
+   as designated in a particular file or component or in included license
+   documentation.  The authors of MySQL hereby grant you an additional
+   permission to link the program and your derivative works with the
+   separately licensed software that they have either included with
+   the program or referenced in the documentation.
 
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
+   GNU General Public License, version 2.0, for more details.
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA */
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 #ifndef TABLE_CACHE_INCLUDED
 #define TABLE_CACHE_INCLUDED
 
-#include "my_global.h"
-#include "sql_class.h"
-#include "sql_base.h"
+#include <assert.h>
+#include <stddef.h>
+#include <sys/types.h>
+
+#include <atomic>
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <utility>
+
+#include "lex_string.h"
+#include "my_base.h"
+
+#include "my_psi_config.h"
+#include "mysql/components/services/bits/mysql_mutex_bits.h"
+#include "mysql/components/services/bits/psi_mutex_bits.h"
+#include "mysql/psi/mysql_mutex.h"
+#include "sql/aggregated_stats.h"
+#include "sql/handler.h"
+#include "sql/sql_base.h"
+#include "sql/sql_class.h"
+#include "sql/sql_plist.h"
+#include "sql/system_variables.h"
+#include "sql/table.h"
+#include "sql/table_trigger_dispatcher.h"
+
+class Table_cache_element;
+
+extern ulong table_cache_size_per_instance, table_cache_instances,
+    table_cache_triggers, table_cache_triggers_per_instance;
+extern struct aggregated_stats global_aggregated_stats;
 
 /**
   Cache for open TABLE objects.
@@ -35,9 +71,8 @@
   This significantly increases scalability in some scenarios.
 */
 
-class Table_cache
-{
-private:
+class Table_cache {
+ private:
   /**
     The table cache lock protects the following data:
 
@@ -70,7 +105,7 @@ private:
     of used TABLE objects in this table cache is stored.
     We use Table_cache_element::share::table_cache_key as key for this hash.
   */
-  HASH m_cache;
+  std::unordered_map<std::string, std::unique_ptr<Table_cache_element>> m_cache;
 
   /**
     List that contains all TABLE instances for tables in this particular
@@ -88,13 +123,31 @@ private:
   */
   uint m_table_count;
 
+  /**
+    LRU-organized list containing all TABLE instances with fully-loaded
+    triggers in this table cache which are not in use by any thread.
+    Tail is LRU TABLE.
+  */
+  I_P_List<TABLE,
+           I_P_List_adapter<TABLE, &TABLE::triggers_lru_next,
+                            &TABLE::triggers_lru_prev>,
+           I_P_List_null_counter, I_P_List_fast_push_back<TABLE>>
+      m_unused_triggers_lru;
+
+  /**
+    Total number of TABLE instances in this table cache with fully-loaded
+    triggers (both in use and unused).
+
+    @sa notify_triggers_load() for rationale behind use of atomic here.
+  */
+  std::atomic<uint> m_table_triggers_count;
+
 #ifdef HAVE_PSI_INTERFACE
   static PSI_mutex_key m_lock_key;
   static PSI_mutex_info m_mutex_keys[];
-#endif 
+#endif
 
-private:
-
+ private:
 #ifdef EXTRA_DEBUG
   void check_unused();
 #else
@@ -105,8 +158,7 @@ private:
 
   inline void free_unused_tables_if_necessary(THD *thd);
 
-public:
-
+ public:
   bool init();
   void destroy();
   static void init_psi_keys();
@@ -118,9 +170,8 @@ public:
   /** Assert that caller owns lock on the table cache. */
   void assert_owner() { mysql_mutex_assert_owner(&m_lock); }
 
-  inline TABLE* get_table(THD *thd, my_hash_value_type hash_value,
-                          const char *key, uint key_length,
-                          TABLE_SHARE **share);
+  inline TABLE *get_table(THD *thd, const char *key, size_t key_length,
+                          bool is_update, TABLE_SHARE **share);
 
   inline void release_table(THD *thd, TABLE *table);
 
@@ -132,59 +183,67 @@ public:
 
   void free_all_unused_tables();
 
-#ifndef DBUG_OFF
+  /**
+    Notify the table cache that we have finalized loading and parsing
+    triggers for one of its TABLE objects.
+
+    @note We use atomic to make it MT-safe without introducing overhead
+          from lock()/unlock() pair.
+  */
+  void notify_triggers_load() { m_table_triggers_count++; }
+
+  uint loaded_triggers_tables() const { return m_table_triggers_count; }
+
+#ifndef NDEBUG
   void print_tables();
 #endif
 };
-
 
 /**
   Container class for all table cache instances in the system.
 */
 
-class Table_cache_manager
-{
-public:
-
+class Table_cache_manager {
+ public:
   /** Maximum supported number of table cache instances. */
-  static const int MAX_TABLE_CACHES= 64;
+  static const int MAX_TABLE_CACHES = 64;
+
+  /** Default number of table cache instances */
+  static const int DEFAULT_MAX_TABLE_CACHES = 16;
 
   bool init();
   void destroy();
 
   /** Get instance of table cache to be used by particular connection. */
-  Table_cache* get_cache(THD *thd)
-  {
-    return &m_table_cache[thd->thread_id % table_cache_instances];
+  Table_cache *get_cache(THD *thd) {
+    return &m_table_cache[thd->thread_id() % table_cache_instances];
   }
 
   /** Get index for the table cache in container. */
-  uint cache_index(Table_cache *cache) const
-  {
-    return (cache - &m_table_cache[0]);
+  uint cache_index(Table_cache *cache) const {
+    return static_cast<uint>(cache - &m_table_cache[0]);
   }
 
   uint cached_tables();
 
   void lock_all_and_tdc();
   void unlock_all_and_tdc();
+  void assert_owner(THD *thd);
   void assert_owner_all();
   void assert_owner_all_and_tdc();
 
-  void free_table(THD *thd,
-                  enum_tdc_remove_table_type remove_type,
+  void free_table(THD *thd, enum_tdc_remove_table_type remove_type,
                   TABLE_SHARE *share);
 
   void free_all_unused_tables();
 
-#ifndef DBUG_OFF
+#ifndef NDEBUG
   void print_tables();
 #endif
 
   friend class Table_cache_iterator;
 
-private:
-
+ private:
   /**
     An array of Table_cache instances.
     Only the first table_cache_instances elements in it are used.
@@ -192,9 +251,7 @@ private:
   Table_cache m_table_cache[MAX_TABLE_CACHES];
 };
 
-
 extern Table_cache_manager table_cache_manager;
-
 
 /**
   Element that represents the table in the specific table cache.
@@ -205,97 +262,100 @@ extern Table_cache_manager table_cache_manager;
   in the header file only to allow inlining of some methods.
 */
 
-class Table_cache_element
-{
-private:
+class Table_cache_element {
+ private:
   /*
     Doubly-linked (back-linked) lists of used and unused TABLE objects
     for this table in this table cache (one such list per table cache).
   */
-  typedef I_P_List <TABLE,
-                    I_P_List_adapter<TABLE,
-                                     &TABLE::cache_next,
-                                     &TABLE::cache_prev> > TABLE_list;
+  typedef I_P_List<
+      TABLE, I_P_List_adapter<TABLE, &TABLE::cache_next, &TABLE::cache_prev>>
+      TABLE_list;
 
   TABLE_list used_tables;
-  TABLE_list free_tables;
+  /**
+    List of unused TABLE objects that do not have fully-loaded triggers;
+    either because there were no triggers, or because the triggers were
+    not previously loaded as they were not needed for read-only statements.
+    (This distinction is why our nomenclature is not just full <-> lazy.)
+  */
+  TABLE_list free_tables_slim;
+  /** List of unused TABLE objects with fully-loaded triggers. */
+  TABLE_list free_tables_full_triggers;
   TABLE_SHARE *share;
 
-public:
+ public:
+  Table_cache_element(TABLE_SHARE *share_arg) : share(share_arg) {}
 
-  Table_cache_element(TABLE_SHARE *share_arg)
-    : share(share_arg)
-  {
-  }
-
-  TABLE_SHARE * get_share() const { return share; };
+  TABLE_SHARE *get_share() const { return share; }
 
   friend class Table_cache;
   friend class Table_cache_manager;
   friend class Table_cache_iterator;
 };
 
-
 /**
   Iterator which allows to go through all used TABLE instances
   for the table in all table caches.
 */
 
-class Table_cache_iterator
-{
+class Table_cache_iterator {
   const TABLE_SHARE *share;
   uint current_cache_index;
   TABLE *current_table;
 
   inline void move_to_next_table();
 
-public:
+ public:
   /**
     Construct iterator over all used TABLE objects for the table share.
 
     @note Assumes that caller owns locks on all table caches.
   */
   inline Table_cache_iterator(const TABLE_SHARE *share_arg);
-  inline TABLE* operator++(int);
+  inline TABLE *operator++(int);
   inline void rewind();
 };
-
 
 /**
   Add table to the tail of unused tables list for table cache
   (i.e. as the most recently used table in this list).
+  If necessary, do the same thing for list of unused tables with
+  fully-loaded triggers.
 */
 
-void Table_cache::link_unused_table(TABLE *table)
-{
-  if (m_unused_tables)
-  {
-    table->next= m_unused_tables;
-    table->prev= m_unused_tables->prev;
-    m_unused_tables->prev= table;
-    table->prev->next= table;
-  }
-  else
-    m_unused_tables= table->next= table->prev= table;
+void Table_cache::link_unused_table(TABLE *table) {
+  if (m_unused_tables) {
+    table->next = m_unused_tables;
+    table->prev = m_unused_tables->prev;
+    m_unused_tables->prev = table;
+    table->prev->next = table;
+  } else
+    m_unused_tables = table->next = table->prev = table;
   check_unused();
+
+  if (table->triggers && table->triggers->has_load_been_finalized())
+    m_unused_triggers_lru.push_back(table);
 }
 
+/**
+  Remove table from the unused tables list for the table cache.
+  If necessary, do the same thing for list of unused tables with
+  fully-loaded triggers for the table cache.
+*/
 
-/** Remove table from the unused tables list for table cache. */
-
-void Table_cache::unlink_unused_table(TABLE *table)
-{
-  table->next->prev= table->prev;
-  table->prev->next= table->next;
-  if (table == m_unused_tables)
-  {
-    m_unused_tables= m_unused_tables->next;
-    if (table == m_unused_tables)
-      m_unused_tables= NULL;
+void Table_cache::unlink_unused_table(TABLE *table) {
+  table->next->prev = table->prev;
+  table->prev->next = table->next;
+  if (table == m_unused_tables) {
+    m_unused_tables = m_unused_tables->next;
+    if (table == m_unused_tables) m_unused_tables = nullptr;
   }
   check_unused();
-}
 
+  if (table->triggers && table->triggers->has_load_been_finalized())
+    m_unused_triggers_lru.remove(table);
+}
 
 /**
   Free unused TABLE instances if total number of TABLE objects
@@ -306,30 +366,42 @@ void Table_cache::unlink_unused_table(TABLE *table)
         this call if table_cache_size was changed dynamically.
 */
 
-void Table_cache::free_unused_tables_if_necessary(THD *thd)
-{
+void Table_cache::free_unused_tables_if_necessary(THD *thd) {
   /*
     We have too many TABLE instances around let us try to get rid of them.
 
     Note that we might need to free more than one TABLE object, and thus
     need the below loop, in case when table_cache_size is changed dynamically,
     at server run time.
+
+    We also might need to get rid of TABLE instances with fully-loaded triggers
+    if there are too many of them. Unfortunately, there is no good way to
+    "unload" triggers, so we have to get rid of the whole TABLE object.
   */
-  if (m_table_count > table_cache_size_per_instance && m_unused_tables)
-  {
+  if ((m_table_count > table_cache_size_per_instance && m_unused_tables) ||
+      (m_table_triggers_count > table_cache_triggers_per_instance &&
+       !m_unused_triggers_lru.is_empty())) {
     mysql_mutex_lock(&LOCK_open);
-    while (m_table_count > table_cache_size_per_instance &&
-           m_unused_tables)
-    {
-      TABLE *table_to_free= m_unused_tables;
+    while (m_table_count > table_cache_size_per_instance && m_unused_tables) {
+      TABLE *table_to_free = m_unused_tables;
       remove_table(table_to_free);
       intern_close_table(table_to_free);
       thd->status_var.table_open_cache_overflows++;
+      global_aggregated_stats.get_shard(thd->thread_id())
+          .table_open_cache_overflows++;
+    }
+    while (m_table_triggers_count > table_cache_triggers_per_instance &&
+           !m_unused_triggers_lru.is_empty()) {
+      TABLE *table_to_free = m_unused_triggers_lru.front();
+      remove_table(table_to_free);
+      intern_close_table(table_to_free);
+      thd->status_var.table_open_cache_triggers_overflows++;
+      DBUG_PRINT("info", ("table_open_cache_triggers_overflows: %llu",
+                          thd->status_var.table_open_cache_triggers_overflows));
     }
     mysql_mutex_unlock(&LOCK_open);
   }
 }
-
 
 /**
    Add newly created TABLE object which is going to be used right away
@@ -343,22 +415,20 @@ void Table_cache::free_unused_tables_if_necessary(THD *thd)
    @retval true  - failure.
 */
 
-bool Table_cache::add_used_table(THD *thd, TABLE *table)
-{
+bool Table_cache::add_used_table(THD *thd, TABLE *table) {
   Table_cache_element *el;
 
   assert_owner();
 
-  DBUG_ASSERT(table->in_use == thd);
+  assert(table->in_use == thd);
 
   /*
     Try to get Table_cache_element representing this table in the cache
     from array in the TABLE_SHARE.
   */
-  el= table->s->cache_element[table_cache_manager.cache_index(this)];
+  el = table->s->cache_element[table_cache_manager.cache_index(this)];
 
-  if (!el)
-  {
+  if (!el) {
     /*
       If TABLE_SHARE doesn't have pointer to the element representing table
       in this cache, the element for the table must be absent from table the
@@ -367,20 +437,13 @@ bool Table_cache::add_used_table(THD *thd, TABLE *table)
       Allocate new Table_cache_element object and add it to the cache
       and array in TABLE_SHARE.
     */
-    DBUG_ASSERT(! my_hash_search(&m_cache,
-                                 (uchar*)table->s->table_cache_key.str,
-                                 table->s->table_cache_key.length));
+    const std::string key(table->s->table_cache_key.str,
+                          table->s->table_cache_key.length);
+    assert(m_cache.count(key) == 0);
 
-    if (!(el= new Table_cache_element(table->s)))
-      return true;
-
-    if (my_hash_insert(&m_cache, (uchar*)el))
-    {
-      delete el;
-      return true;
-    }
-
-    table->s->cache_element[table_cache_manager.cache_index(this)]= el;
+    el = new Table_cache_element(table->s);
+    m_cache.emplace(key, std::unique_ptr<Table_cache_element>(el));
+    table->s->cache_element[table_cache_manager.cache_index(this)] = el;
   }
 
   /* Add table to the used tables list */
@@ -393,7 +456,6 @@ bool Table_cache::add_used_table(THD *thd, TABLE *table)
   return false;
 }
 
-
 /**
    Prepare used or unused TABLE instance for destruction by removing
    it from the table cache.
@@ -401,48 +463,53 @@ bool Table_cache::add_used_table(THD *thd, TABLE *table)
    @note Caller should own lock on the table cache.
 */
 
-void Table_cache::remove_table(TABLE *table)
-{
-  Table_cache_element *el=
-    table->s->cache_element[table_cache_manager.cache_index(this)];
+void Table_cache::remove_table(TABLE *table) {
+  Table_cache_element *el =
+      table->s->cache_element[table_cache_manager.cache_index(this)];
 
   assert_owner();
 
-  if (table->in_use)
-  {
+  if (table->in_use) {
     /* Remove from per-table chain of used TABLE objects. */
     el->used_tables.remove(table);
-  }
-  else
-  {
+  } else {
     /* Remove from per-table chain of unused TABLE objects. */
-    el->free_tables.remove(table);
+    if (table->triggers && table->triggers->has_load_been_finalized())
+      el->free_tables_full_triggers.remove(table);
+    else
+      el->free_tables_slim.remove(table);
 
     /* And per-cache unused chain. */
     unlink_unused_table(table);
   }
 
   m_table_count--;
+  if (table->triggers && table->triggers->has_load_been_finalized())
+    m_table_triggers_count--;
 
-  if (el->used_tables.is_empty() && el->free_tables.is_empty())
-  {
-    (void) my_hash_delete(&m_cache, (uchar*) el);
+  if (el->used_tables.is_empty() && el->free_tables_full_triggers.is_empty() &&
+      el->free_tables_slim.is_empty()) {
+    const std::string key(table->s->table_cache_key.str,
+                          table->s->table_cache_key.length);
+    m_cache.erase(key);
     /*
       Remove reference to deleted cache element from array
       in the TABLE_SHARE.
     */
-    table->s->cache_element[table_cache_manager.cache_index(this)]= NULL;
+    table->s->cache_element[table_cache_manager.cache_index(this)] = nullptr;
   }
 }
-
 
 /**
   Get an unused TABLE instance from the table cache.
 
   @param      thd         Thread context.
-  @param      hash_value  Hash value for the key identifying table.
   @param      key         Key identifying table.
   @param      key_length  Length of key for the table.
+  @param      is_update   Indicates whether statement is going to use
+                          TABLE object for updating the table; if so,
+                          it is better to obtain a TABLE instance with
+                          fully-loaded triggers.
   @param[out] share       NULL - if table cache doesn't contain any
                           information about the table (i.e. doesn't have
                           neither used nor unused TABLE objects for it).
@@ -458,32 +525,50 @@ void Table_cache::remove_table(TABLE *table)
                      are used TABLE objects in cache and NULL otherwise.
 */
 
-TABLE* Table_cache::get_table(THD *thd, my_hash_value_type hash_value,
-                              const char *key, uint key_length,
-                              TABLE_SHARE **share)
-{
-  Table_cache_element *el;
+TABLE *Table_cache::get_table(THD *thd, const char *key, size_t key_length,
+                              bool is_update, TABLE_SHARE **share) {
   TABLE *table;
 
   assert_owner();
 
-  *share= NULL;
+  *share = nullptr;
 
-  if (!(el= (Table_cache_element*) my_hash_search_using_hash_value(&m_cache,
-                                     hash_value, (uchar*) key, key_length)))
-    return NULL;
+  const std::string key_str(key, key_length);
+  const auto el_it = m_cache.find(key_str);
+  if (el_it == m_cache.end()) return nullptr;
+  Table_cache_element *el = el_it->second.get();
 
-  *share= el->share;
+  *share = el->share;
 
-  if ((table= el->free_tables.front()))
-  {
-    DBUG_ASSERT(!table->in_use);
-
+  /*
+    Obtain (get first and unlink) table from list of unused TABLE objects for
+    this table in this cache.
+  */
+  if (!is_update) {
     /*
-      Unlink table from list of unused TABLE objects for this
-      table in this cache.
+      For read-only statements we prefer TABLE objects which don't have
+      triggers fully-loaded. If successful, this should leave unused TABLEs
+      with fully-loaded triggers for read-write statements.
+      If there are no TABLE instances without fully-loaded triggers available,
+      we will resort to using one that has them. That's still better than
+      doing full-blown TABLE construction process.
     */
-    el->free_tables.remove(table);
+    table = el->free_tables_slim.pop_front();
+    if (!table) table = el->free_tables_full_triggers.pop_front();
+  } else {
+    /*
+      For read-write statements try to get a TABLE object with fully-loaded
+      triggers.
+      If there is no such object, try to obtain a TABLE object without
+      fully-loaded triggers. (If necessary trigger loading will be finalized
+      later.)
+    */
+    table = el->free_tables_full_triggers.pop_front();
+    if (!table) table = el->free_tables_slim.pop_front();
+  }
+
+  if (table) {
+    assert(!table->in_use);
 
     /* Unlink table from unused tables list for this cache. */
     unlink_unused_table(table);
@@ -494,16 +579,15 @@ TABLE* Table_cache::get_table(THD *thd, my_hash_value_type hash_value,
     */
     el->used_tables.push_front(table);
 
-    table->in_use= thd;
+    table->in_use = thd;
     /* The ex-unused table must be fully functional. */
-    DBUG_ASSERT(table->db_stat && table->file);
+    assert(table->db_stat && table->file);
     /* The children must be detached from the table. */
-    DBUG_ASSERT(! table->file->extra(HA_EXTRA_IS_ATTACHED_CHILDREN));
+    assert(!table->file->ha_extra(HA_EXTRA_IS_ATTACHED_CHILDREN));
   }
 
   return table;
 }
-
 
 /**
   Put used TABLE instance back to the table cache and mark
@@ -513,25 +597,27 @@ TABLE* Table_cache::get_table(THD *thd, my_hash_value_type hash_value,
   @note Sets TABLE::in_use member as side effect.
 */
 
-void Table_cache::release_table(THD *thd, TABLE *table)
-{
-  Table_cache_element *el=
-    table->s->cache_element[table_cache_manager.cache_index(this)];
+void Table_cache::release_table(THD *thd, TABLE *table) {
+  Table_cache_element *el =
+      table->s->cache_element[table_cache_manager.cache_index(this)];
 
   assert_owner();
 
-  DBUG_ASSERT(table->in_use);
-  DBUG_ASSERT(table->file);
+  assert(table->in_use);
+  assert(table->file);
 
   /* We shouldn't put the table to 'unused' list if the share is old. */
-  DBUG_ASSERT(! table->s->has_old_version());
+  assert(!table->s->has_old_version());
 
-  table->in_use= NULL;
+  table->in_use = nullptr;
 
   /* Remove TABLE from the list of used objects for the table in this cache. */
   el->used_tables.remove(table);
   /* Add TABLE to the list of unused objects for the table in this cache. */
-  el->free_tables.push_front(table);
+  if (table->triggers && table->triggers->has_load_been_finalized())
+    el->free_tables_full_triggers.push_front(table);
+  else
+    el->free_tables_slim.push_front(table);
   /* Also link it last in the list of unused TABLE objects for the cache. */
   link_unused_table(table);
 
@@ -542,36 +628,28 @@ void Table_cache::release_table(THD *thd, TABLE *table)
   free_unused_tables_if_necessary(thd);
 }
 
-
 /**
   Construct iterator over all used TABLE objects for the table share.
 
   @note Assumes that caller owns locks on all table caches.
 */
 Table_cache_iterator::Table_cache_iterator(const TABLE_SHARE *share_arg)
-  : share(share_arg), current_cache_index(0), current_table(NULL)
-{
+    : share(share_arg), current_cache_index(0), current_table(nullptr) {
   table_cache_manager.assert_owner_all();
   move_to_next_table();
 }
 
-
 /** Helper that moves iterator to the next used TABLE for the table share. */
 
-void Table_cache_iterator::move_to_next_table()
-{
-  for (; current_cache_index < table_cache_instances; ++current_cache_index)
-  {
+void Table_cache_iterator::move_to_next_table() {
+  for (; current_cache_index < table_cache_instances; ++current_cache_index) {
     Table_cache_element *el;
 
-    if ((el= share->cache_element[current_cache_index]))
-    {
-      if ((current_table= el->used_tables.front()))
-        break;
+    if ((el = share->cache_element[current_cache_index])) {
+      if ((current_table = el->used_tables.front())) break;
     }
   }
 }
-
 
 /**
   Get current used TABLE instance and move iterator to the next one.
@@ -579,21 +657,18 @@ void Table_cache_iterator::move_to_next_table()
   @note Assumes that caller owns locks on all table caches.
 */
 
-TABLE* Table_cache_iterator::operator ++(int)
-{
+TABLE *Table_cache_iterator::operator++(int) {
   table_cache_manager.assert_owner_all();
 
-  TABLE *result= current_table;
+  TABLE *result = current_table;
 
-  if (current_table)
-  {
-    Table_cache_element::TABLE_list::Iterator
-      it(share->cache_element[current_cache_index]->used_tables, current_table);
+  if (current_table) {
+    Table_cache_element::TABLE_list::Iterator it(
+        share->cache_element[current_cache_index]->used_tables, current_table);
 
-    current_table= ++it;
+    current_table = ++it;
 
-    if (!current_table)
-    {
+    if (!current_table) {
       ++current_cache_index;
       move_to_next_table();
     }
@@ -602,11 +677,9 @@ TABLE* Table_cache_iterator::operator ++(int)
   return result;
 }
 
-
-void Table_cache_iterator::rewind()
-{
-  current_cache_index= 0;
-  current_table= NULL;
+void Table_cache_iterator::rewind() {
+  current_cache_index = 0;
+  current_table = nullptr;
   move_to_next_table();
 }
 

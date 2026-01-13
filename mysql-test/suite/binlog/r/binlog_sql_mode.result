@@ -1,8 +1,10 @@
 SET @old_sql_mode=  @@global.sql_mode;
 SET @old_binlog_format=@@session.binlog_format;
+Warnings:
+Warning	1287	'@@binlog_format' is deprecated and will be removed in a future release.
 SET SESSION sql_mode=8;
 Initialization 
-RESET MASTER;
+RESET BINARY LOGS AND GTIDS;
 CREATE TABLE t1 (id INT);
 CREATE PROCEDURE testProc() SELECT * FROM t1;
 CREATE VIEW testView as SELECT * from t1;
@@ -27,6 +29,8 @@ select
 is not null AS Loaded;
 Loaded
 1
+Warnings:
+Warning	1287	Setting user variables within expressions is deprecated and will be removed in a future release. Consider alternatives: 'SET variable=expression, ...', or 'SELECT expression(s) INTO variables(s)'.
 *** String sql_mode=0 is found: 0 ***
 Clean Up
 DROP PROCEDURE testProc;
@@ -37,6 +41,8 @@ DROP VIEW testView;
 DROP TABLE t1;
 SET @@global.sql_mode= @old_sql_mode;
 SET @@session.binlog_format=@old_binlog_format;
+Warnings:
+Warning	1287	'@@binlog_format' is deprecated and will be removed in a future release.
 
 #
 # Test for Bug#12601974 - STORED PROCEDURE SQL_MODE=NO_BACKSLASH_ESCAPES
@@ -120,7 +126,7 @@ wxyz\%ef
 wxyz\_ef
 "Dropping table test_table"
 DROP TABLE test_table;
-RESET MASTER;
+RESET BINARY LOGS AND GTIDS;
 #"test_table" content after replaying the binlog
 SELECT * FROM test_table;
 c1
@@ -147,5 +153,6 @@ wxyz\_ef
 DROP DATABASE mysqltest_db;
 SET @@sql_mode= @org_mode;
 use test;
+RESET BINARY LOGS AND GTIDS;
 
 #End of Test for Bug#12601974 

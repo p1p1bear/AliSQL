@@ -1,14 +1,22 @@
 /*
- *  Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+ *  Copyright (c) 2010, 2025, Oracle and/or its affiliates.
  *
  *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; version 2 of the License.
+ *  it under the terms of the GNU General Public License, version 2.0,
+ *  as published by the Free Software Foundation.
+ *
+ *  This program is designed to work with certain software (including
+ *  but not limited to OpenSSL) that is licensed under separate terms,
+ *  as designated in a particular file or component or in included license
+ *  documentation.  The authors of MySQL hereby grant you an additional
+ *  permission to link the program and your derivative works with the
+ *  separately licensed software that they have either included with
+ *  the program or referenced in the documentation.
  *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
+ *  GNU General Public License, version 2.0, for more details.
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
@@ -17,11 +25,15 @@
 
 package com.mysql.clusterj.tie;
 
+import com.mysql.clusterj.ClusterJTableException;
+
+import com.mysql.ndbjtie.ndbapi.NdbDictionary;
 import com.mysql.ndbjtie.ndbapi.NdbDictionary.DictionaryConst;
-import com.mysql.ndbjtie.ndbapi.NdbDictionary.IndexConst;
-import com.mysql.ndbjtie.ndbapi.NdbDictionary.TableConst;
 import com.mysql.ndbjtie.ndbapi.NdbDictionary.DictionaryConst.ListConst.Element;
 import com.mysql.ndbjtie.ndbapi.NdbDictionary.DictionaryConst.ListConst.ElementArray;
+import com.mysql.ndbjtie.ndbapi.NdbDictionary.IndexConst;
+import com.mysql.ndbjtie.ndbapi.NdbDictionary.TableConst;
+import com.mysql.ndbjtie.ndbapi.NdbErrorConst;
 
 import com.mysql.clusterj.core.store.Index;
 import com.mysql.clusterj.core.store.Table;
@@ -35,47 +47,115 @@ import com.mysql.clusterj.core.util.LoggerFactoryService;
  */
 class DictionaryImpl implements com.mysql.clusterj.core.store.Dictionary {
 
-    /** My message translator */
-    static final I18NHelper local = I18NHelper
-            .getInstance(DictionaryImpl.class);
-
     /** My logger */
     static final Logger logger = LoggerFactoryService.getFactory()
             .getInstance(DictionaryImpl.class);
 
-    private DictionaryConst ndbDictionary;
+    private final NdbDictionary.Dictionary ndbDictionary;
 
-    public DictionaryImpl(DictionaryConst ndbDictionary) {
+    private final DbFactoryImpl dbFactory;
+
+    /* If true, prefer getTable() over getTableGlobal() */
+    private final boolean preferThreadLocal;
+
+    /* waitMsec in nanos; max allowed execution time */
+    private final long maxNanos;
+
+    /* Set of wait times per iteration in the getTable() wait loop */
+    private final int[] configWaitTimes;
+
+    public DictionaryImpl(NdbDictionary.Dictionary ndbDictionary,
+                          DbFactoryImpl dbFactory,
+                          boolean preferThreadLocal) {
         this.ndbDictionary = ndbDictionary;
+        this.dbFactory = dbFactory;
+        this.preferThreadLocal = preferThreadLocal;
+
+        /* Configure the wait loop in getTable().
+        */
+        int waitMsec = dbFactory.getTableWaitTime();
+        maxNanos = waitMsec * 1000000;
+        if(waitMsec == 0) {
+            configWaitTimes = new int[0];
+        } else if(waitMsec <= 5) {
+            configWaitTimes = new int[1];
+            configWaitTimes[0] = waitMsec;
+        } else {
+            configWaitTimes = new int[4];
+            configWaitTimes[0] = waitMsec / 10;         // 1 tenth
+            configWaitTimes[1] = (waitMsec * 2) / 10;   // 2 tenths
+            configWaitTimes[2] = (waitMsec * 3) / 10;   // 3 tenths
+            configWaitTimes[3] = (waitMsec * 4) / 10;   // 4 tenths
+        }
+    }
+
+    private TableConst getNdbTable(String tableName) {
+        return preferThreadLocal ?
+            ndbDictionary.getTable(tableName) :
+            ndbDictionary.getTableGlobal(tableName);
+    }
+
+    private IndexConst getNdbIndex(String indexName, String tableName) {
+        return preferThreadLocal ?
+            ndbDictionary.getIndex(indexName, tableName) :
+            ndbDictionary.getIndexGlobal(indexName, tableName);
     }
 
     public Table getTable(String tableName) {
-        TableConst ndbTable = ndbDictionary.getTable(tableName);
-        if (ndbTable == null) {
-            // try the lower case table name
-            ndbTable = ndbDictionary.getTable(tableName.toLowerCase());
+        final long startNanos = System.nanoTime();
+        final long breakTime = startNanos + maxNanos;
+        final int retries = configWaitTimes.length;
+        final String lowerCaseName = tableName.toLowerCase();
+        TableConst ndbTable = null;
+
+        for(int iter = 0; iter <= retries ; iter++) {
+            ndbTable = getNdbTable(tableName);
+            if (ndbTable == null && ! lowerCaseName.equals(tableName)) {
+                // try the lower case table name
+                ndbTable = getNdbTable(tableName.toLowerCase());
+            }
+
+            if (ndbTable == null && iter < retries) {
+                if(System.nanoTime() > breakTime) break;
+                try {
+                    Thread.sleep(configWaitTimes[iter]);
+                } catch (InterruptedException e) {
+                    break;
+                }
+            }
         }
+
         if (ndbTable == null) {
-            return null;
+            NdbErrorConst error = ndbDictionary.getNdbError();
+            throw new ClusterJTableException(
+                tableName, startNanos, System.nanoTime(),
+                error.message(), error.code(), error.mysql_code(),
+                error.status(), error.classification());
         }
+
+        if (ndbTable.getObjectStatus() != NdbDictionary.ObjectConst.Status.Retrieved)
+            throw new ClusterJTableException(
+                tableName, startNanos, System.nanoTime(),
+                "Invalid table in local dictionary", -1, 159, 2, 5);
+
         return new TableImpl(ndbTable, getIndexNames(ndbTable.getName()));
     }
 
     public Index getIndex(String indexName, String tableName, String indexAlias) {
         if ("PRIMARY$KEY".equals(indexName)) {
             // create a pseudo index for the primary key hash
-            TableConst ndbTable = ndbDictionary.getTable(tableName);
+            TableConst ndbTable = getNdbTable(tableName);
             if (ndbTable == null) {
                 // try the lower case table name
-                ndbTable = ndbDictionary.getTable(tableName.toLowerCase());
+                ndbTable = getNdbTable(tableName.toLowerCase());
             }
             handleError(ndbTable, ndbDictionary, "");
             return new IndexImpl(ndbTable);
         }
-        IndexConst ndbIndex = ndbDictionary.getIndex(indexName, tableName);
+        IndexConst ndbIndex = getNdbIndex(indexName, tableName);
         if (ndbIndex == null) {
             // try the lower case table name
-            ndbIndex = ndbDictionary.getIndex(indexName, tableName.toLowerCase());
+            ndbIndex = getNdbIndex(indexName, tableName.toLowerCase());
         }
         handleError(ndbIndex, ndbDictionary, indexAlias);
         return new IndexImpl(ndbIndex, indexAlias);
@@ -83,8 +163,8 @@ class DictionaryImpl implements com.mysql.clusterj.core.store.Dictionary {
 
     public String[] getIndexNames(String tableName) {
         // get all indexes for this table including ordered PRIMARY
-        com.mysql.ndbjtie.ndbapi.NdbDictionary.DictionaryConst.List indexList = 
-            com.mysql.ndbjtie.ndbapi.NdbDictionary.DictionaryConst.List.create();
+        DictionaryConst.List indexList = DictionaryConst.List.create();
+        handleError(indexList, ndbDictionary, tableName);
         final String[] result;
         try {
             int returnCode = ndbDictionary.listIndexes(indexList, tableName);
@@ -122,4 +202,14 @@ class DictionaryImpl implements com.mysql.clusterj.core.store.Dictionary {
         }
     }
 
+    /** Remove cached table from this ndb dictionary. This allows schema change to work.
+     * @param tableName the name of the table
+     */
+    public void invalidateTable(String tableName) {
+        ndbDictionary.invalidateTable(tableName);
+    }
+
+    public NdbDictionary.Dictionary getNdbDictionary() {
+        return ndbDictionary;
+    }
 }

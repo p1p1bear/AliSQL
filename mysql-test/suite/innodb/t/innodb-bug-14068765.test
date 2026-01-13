@@ -1,22 +1,10 @@
--- source include/have_innodb.inc
---disable_warnings
 
-DROP TABLE IF EXISTS t1;
---enable_warnings
 let MYSQLD_DATADIR =`SELECT @@datadir`;
-let $innodb_file_per_table = `SELECT @@innodb_file_per_table`;
-let $innodb_file_format = `SELECT @@innodb_file_format`;
-
-SET GLOBAL innodb_file_per_table = 1;
-SELECT @@innodb_file_per_table;
-
-#SET GLOBAL innodb_file_format = `Barracuda`;
-#SELECT @@innodb_file_format;
 
 # Export/import on the same instance, with --innodb-file-per-table=1
 CREATE DATABASE testdb_wl5522;
 
-CREATE TABLE testdb_wl5522.t1(col1 bit(1) , col2 boolean,col3 tinyint , col4 smallint , col5 mediumint ,col6 int , col7 bigint , col8 float (14,3) ,col9 double (14,3), col10 VARCHAR(20) CHARACTER SET utf8 , col11 TEXT CHARACTER SET binary ,      col12 ENUM('a','b','c') CHARACTER SET binary  ,col13 TEXT CHARACTER SET latin1 COLLATE latin1_general_cs ,col14 CHAR(20) , col15 VARBINARY (400) , col16 BINARY(40), col17 BLOB (400) , col18 int not null primary key,col19 DATE ,col20 DATETIME , col21 TIMESTAMP ,col22 TIME , col23 YEAR ) ENGINE = Innodb;
+CREATE TABLE testdb_wl5522.t1(col1 bit(1) , col2 boolean,col3 tinyint , col4 smallint , col5 mediumint ,col6 int , col7 bigint , col8 float (14,3) ,col9 double (14,3), col10 VARCHAR(20) CHARACTER SET utf8mb3 , col11 TEXT CHARACTER SET binary ,      col12 ENUM('a','b','c') CHARACTER SET binary  ,col13 TEXT CHARACTER SET latin1 COLLATE latin1_general_cs ,col14 CHAR(20) , col15 VARBINARY (400) , col16 BINARY(40), col17 BLOB (400) , col18 int not null primary key,col19 DATE ,col20 DATETIME , col21 TIMESTAMP ,col22 TIME , col23 YEAR ) ENGINE = Innodb;
 
 
 CREATE INDEX idx1 ON testdb_wl5522.t1(col18);
@@ -37,14 +25,14 @@ INSERT INTO  testdb_wl5522.t1 VALUES (NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NU
 FLUSH TABLES testdb_wl5522.t1 WITH READ LOCK;
 SELECT COUNT(*) FROM testdb_wl5522.t1;
 perl;
-do 'include/innodb-util.inc';
+require 'include/innodb-util.inc';
 ib_backup_tablespaces("testdb_wl5522", "t1");
 EOF
 UNLOCK TABLES;
 
 DROP TABLE testdb_wl5522.t1;
 
-CREATE TABLE testdb_wl5522.t1(col1 bit(1) , col2 boolean,col3 tinyint , col4 smallint , col5 mediumint ,col6 int , col7 bigint , col8 float (14,3) ,col9 double (14,3), col10 VARCHAR(20) CHARACTER SET utf8 , col11 TEXT CHARACTER SET binary ,      col12 ENUM('a','b','c') CHARACTER SET binary  ,col13 TEXT CHARACTER SET latin1 COLLATE latin1_general_cs ,col14 CHAR(20) , col15 VARBINARY (400) , col16 BINARY(40), col17 BLOB (400) , col18 int not null primary key,col19 DATE ,col20 DATETIME , col21 TIMESTAMP ,col22 TIME , col23 YEAR ) ENGINE = Innodb;
+CREATE TABLE testdb_wl5522.t1(col1 bit(1) , col2 boolean,col3 tinyint , col4 smallint , col5 mediumint ,col6 int , col7 bigint , col8 float (14,3) ,col9 double (14,3), col10 VARCHAR(20) CHARACTER SET utf8mb3 , col11 TEXT CHARACTER SET binary ,      col12 ENUM('a','b','c') CHARACTER SET binary  ,col13 TEXT CHARACTER SET latin1 COLLATE latin1_general_cs ,col14 CHAR(20) , col15 VARBINARY (400) , col16 BINARY(40), col17 BLOB (400) , col18 int not null primary key,col19 DATE ,col20 DATETIME , col21 TIMESTAMP ,col22 TIME , col23 YEAR ) ENGINE = Innodb;
 
 
 CREATE INDEX idx1 ON testdb_wl5522.t1(col18);
@@ -55,7 +43,7 @@ CREATE UNIQUE INDEX idx3 ON testdb_wl5522.t1(col8);
 ALTER TABLE testdb_wl5522.t1 DISCARD TABLESPACE;
 
 perl;
-do 'include/innodb-util.inc';
+require 'include/innodb-util.inc';
 ib_restore_tablespaces("testdb_wl5522", "t1");
 EOF
 
@@ -69,5 +57,6 @@ DROP TABLE testdb_wl5522.t1;
 
 DROP DATABASE testdb_wl5522;
 
-eval SET GLOBAL INNODB_FILE_FORMAT=$innodb_file_format;
-eval SET GLOBAL INNODB_FILE_PER_TABLE=$innodb_file_per_table;
+# Cleanup
+--remove_file $MYSQLTEST_VARDIR/tmp/t1.cfg
+--remove_file $MYSQLTEST_VARDIR/tmp/t1.ibd

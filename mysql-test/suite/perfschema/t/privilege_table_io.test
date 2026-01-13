@@ -1,8 +1,11 @@
 # Tests for PERFORMANCE_SCHEMA table io
 
---source include/not_embedded.inc
---source include/have_perfschema.inc
+# This test will show different output with GTID_MODE=ON
+--source include/rpl/set_gtid_mode_off.inc
+
 --source ../include/table_io_setup_helper.inc
+# Disable automatic statistics for the helper table to prevent histogram IO.
+ALTER TABLE test.marker STATS_AUTO_RECALC=0;
 
 # Remove "deleted" records from mysql.* that may come from previous tests,
 # to avoid displaying spurious fetch.
@@ -21,6 +24,20 @@ optimize table mysql.proxies_priv;
 optimize table mysql.tables_priv;
 optimize table mysql.procs_priv;
 optimize table mysql.servers;
+
+# Execute 'flush privileges' one time before recording so that
+# fetch from dictionary tables does not pollute the result.
+flush privileges;
+
+# Execute show statements to make sure the corresponding
+# dd::Table objects are acquired and present in the dictionary
+# cache. This is necessary to avoid nondeterminism due to
+# the caching behavior.
+
+show create table test.marker;
+show global status;
+show global variables;
+
 --enable_result_log
 
 # Start recording events
@@ -36,10 +53,8 @@ insert into test.marker set a = 1;
 # This will not, the ACL cache is already loaded
 insert into test.marker set a = 1;
 insert into test.marker set a = 1;
-show variables where
-    `Variable_name` != "performance_schema_max_statement_classes" and
-    `Variable_name` like "performance_schema%";
-show status like "performance_schema%";
+show global variables like "performance_schema%table%";
+show global status like "performance_schema%table%";
 # Stop recording events + pull results
 let $schema_to_dump= "test", "mysql";
 --source ../include/table_io_result_helper.inc
@@ -49,3 +64,6 @@ let $schema_to_dump= "test", "mysql";
 
 update performance_schema.setup_objects set enabled='NO'
   where object_type='TABLE' and object_schema= 'mysql';
+
+# Restore the default for gtid_mode which is ON
+--source include/rpl/set_gtid_mode_on.inc

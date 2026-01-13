@@ -4,6 +4,7 @@
 #      character_sets
 #      collations
 #      collation_character_set_applicability
+# This test is not dedicated to check some storage engine. 
 #
 # Created:
 # 2009-04-28 mleich Replace the charset_collation_* test which failed too often
@@ -66,14 +67,14 @@ connect (con,localhost,dbdict_test,,);
 #   - exist in all build types
 #   - have in all build types the same "state".
 #   The character set
-#   - utf8 is used for Metadata
+#   - utf8mb3 is used for Metadata
 #   - ascii is a quite usual
 #   The collations <character set>_general_ci and <character set>_bin seem
 #   to be available all time.
 #
 ################################################################################
 
-let $char_set_condition= character_set_name IN ('utf8','latin1','binary');
+let $char_set_condition= character_set_name IN ('utf8mb3','latin1','binary');
 let $collation_condition=
    (collation_name LIKE CONCAT(character_set_name,'_general_ci')
     OR
@@ -100,8 +101,10 @@ ORDER BY collation_name, character_set_name;
 
 
 # Cleanup
---echo # Switch to connection default + disconnect con
-connection default;
+connection con;
 disconnect con;
+--source include/wait_until_disconnected.inc
+--echo # Switch to connection default
+connection default;
 DROP USER dbdict_test@localhost;
 

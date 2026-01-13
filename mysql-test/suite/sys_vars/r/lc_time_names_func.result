@@ -19,7 +19,9 @@ SELECT @@session.lc_time_names;
 en_IN
 '#--------------------FN_DYNVARS_060_02-------------------------#'
 'connection default'
-SET NAMES 'utf8';
+SET NAMES 'utf8mb3';
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
 SET @@session.lc_time_names = 'en_US';
 SELECT DATE_FORMAT('2010-01-01','%W %a %M %b'), DAYNAME('2010-05-05'),MONTHNAME('2010-12-12');
 DATE_FORMAT('2010-01-01','%W %a %M %b')	DAYNAME('2010-05-05')	MONTHNAME('2010-12-12')

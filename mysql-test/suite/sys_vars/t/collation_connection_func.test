@@ -19,6 +19,7 @@
 #                                                                             #
 ###############################################################################
 
+
 --echo '#--------------------FN_DYNVARS_015_01-------------------------#'
 ######################################################################
 # Check if setting collation_connection is changed in new connection # 
@@ -47,11 +48,13 @@ connection default;
 DROP TABLE IF EXISTS t1;
 --enable_warnings
 
+--character_set latin1
+
 #==============================================================================
 --echo '----check if collation_connection update character_set_connection---'
 #==============================================================================
 
-SET @@session.collation_connection = utf8_spanish_ci;
+SET @@session.collation_connection = utf8mb3_spanish_ci;
 SELECT @@collation_connection, @@character_set_database;
 
 #==============================================================================
@@ -60,34 +63,36 @@ SELECT @@collation_connection, @@character_set_database;
 SET @@session.collation_connection = latin1_swedish_ci;
 SELECT 'mysql'='MySql';
 SELECT _latin2'mysql' COLLATE latin2_general_ci='MySql';
-SELECT _utf8'mysql'=_utf8'MySql' COLLATE utf8_unicode_ci;
+SELECT _utf8mb3'mysql'=_utf8mb3'MySql' COLLATE utf8mb3_unicode_ci;
 
 SET @@session.collation_connection = latin1_general_cs;
 SELECT 'mysql'='MySql';
 SELECT _latin2'mysql'COLLATE latin2_general_ci='MySql';
 --Error ER_CANT_AGGREGATE_2COLLATIONS
-SELECT _utf8'mysql'COLLATE utf8_danish_ci=_utf8'MySql'COLLATE utf8_unicode_ci;
+SELECT _utf8mb3'mysql'COLLATE utf8mb3_danish_ci=_utf8mb3'MySql'COLLATE utf8mb3_unicode_ci;
 
 #==============================================================================
 --echo '---collation_connection does not effect comparision with column---'
 #==============================================================================
 # fill table with some test data
 CREATE TABLE t1(a CHAR(20)CHARACTER SET latin1 COLLATE latin1_german2_ci);
-INSERT INTO t1 VALUES('Müller');
+INSERT INTO t1 VALUES(_latin1'Müller');
 
 
 SET @@session.collation_connection = latin2_hungarian_ci;
-SELECT * FROM t1 WHERE a='Müller';
+SELECT * FROM t1 WHERE a=_latin1'Müller';
 
 SET @@session.collation_connection = latin1_general_cs;
-SELECT * FROM t1 WHERE a='müller';
+SELECT * FROM t1 WHERE a=_latin1'müller';
 
 --echo 'check if string literal collation is used';
-SELECT * FROM t1 WHERE a='müller' COLLATE latin1_general_cs;
-SELECT * FROM t1 WHERE a='müller' COLLATE latin1_german1_ci;
+SELECT * FROM t1 WHERE a=_latin1'müller' COLLATE latin1_general_cs;
+SELECT * FROM t1 WHERE a=_latin1'müller' COLLATE latin1_german1_ci;
 
 # clean up
 DROP TABLE t1;
+--character_set utf8mb4
+set names utf8mb4;
 SET @@global.collation_connection = @global_collation_connection;
 SET @@session.collation_connection = @session_collation_connection;
 #########################################################

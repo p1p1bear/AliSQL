@@ -1,8 +1,3 @@
---source include/have_sjis.inc
---source include/have_ucs2.inc
---source include/have_ujis.inc
---source include/have_utf8.inc
---source include/have_innodb.inc
 
 --disable_warnings
 drop table if exists `Ｔ１`;
@@ -17,21 +12,21 @@ drop table if exists `Ｔ９`;
 --enable_warnings
 
 #
-# Test CHARSET() function with Japanese characters in utf8 encoding
+# Test CHARSET() function with Japanese characters in utf8mb3 encoding
 #
 
-SET NAMES utf8;
-SET character_set_database = utf8;
+SET NAMES utf8mb3;
+SET character_set_database = utf8mb3;
 
-CREATE TABLE `Ｔ１` (`Ｃ１` char(20)) DEFAULT CHARSET = utf8 engine = innodb;
-CREATE TABLE `Ｔ２` (`Ｃ１` char(20)) DEFAULT CHARSET = utf8 engine = innodb;
-CREATE TABLE `Ｔ３` (`Ｃ１` char(20)) DEFAULT CHARSET = utf8 engine = innodb;
-CREATE TABLE `Ｔ４` (`Ｃ１` char(20)) DEFAULT CHARSET = utf8 engine = myisam;
-CREATE TABLE `Ｔ５` (`Ｃ１` char(20)) DEFAULT CHARSET = utf8 engine = myisam;
-CREATE TABLE `Ｔ６` (`Ｃ１` char(20)) DEFAULT CHARSET = utf8 engine = myisam;
-CREATE TABLE `Ｔ７` (`Ｃ１` char(20)) DEFAULT CHARSET = utf8 engine = MEMORY;
-CREATE TABLE `Ｔ８` (`Ｃ１` char(20)) DEFAULT CHARSET = utf8 engine = MEMORY;
-CREATE TABLE `Ｔ９` (`Ｃ１` char(20)) DEFAULT CHARSET = utf8 engine = MEMORY;
+CREATE TABLE `Ｔ１` (`Ｃ１` char(20)) DEFAULT CHARSET = utf8mb3 engine = innodb;
+CREATE TABLE `Ｔ２` (`Ｃ１` char(20)) DEFAULT CHARSET = utf8mb3 engine = innodb;
+CREATE TABLE `Ｔ３` (`Ｃ１` char(20)) DEFAULT CHARSET = utf8mb3 engine = innodb;
+CREATE TABLE `Ｔ４` (`Ｃ１` char(20)) DEFAULT CHARSET = utf8mb3 engine = myisam;
+CREATE TABLE `Ｔ５` (`Ｃ１` char(20)) DEFAULT CHARSET = utf8mb3 engine = myisam;
+CREATE TABLE `Ｔ６` (`Ｃ１` char(20)) DEFAULT CHARSET = utf8mb3 engine = myisam;
+CREATE TABLE `Ｔ７` (`Ｃ１` char(20)) DEFAULT CHARSET = utf8mb3 engine = MEMORY;
+CREATE TABLE `Ｔ８` (`Ｃ１` char(20)) DEFAULT CHARSET = utf8mb3 engine = MEMORY;
+CREATE TABLE `Ｔ９` (`Ｃ１` char(20)) DEFAULT CHARSET = utf8mb3 engine = MEMORY;
 
 #Load the following data in each table
 # jisx0201 hankaku-katakana data
@@ -52,15 +47,15 @@ CREATE TABLE `Ｔ９` (`Ｃ１` char(20)) DEFAULT CHARSET = utf8 engine = MEMORY
 SELECT DISTINCT CHARSET(`Ｃ１`) FROM `Ｔ１`;
 SELECT DISTINCT CHARSET(`Ｃ１`) FROM `Ｔ２`;
 SELECT DISTINCT CHARSET(`Ｃ１`) FROM `Ｔ３`;
-SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING utf8)) FROM `Ｔ１`;
+SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING utf8mb3)) FROM `Ｔ１`;
 SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING ucs2)) FROM `Ｔ１`;
 SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING sjis)) FROM `Ｔ１`;
 SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING ujis)) FROM `Ｔ１`;
-SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING utf8)) FROM `Ｔ２`;
+SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING utf8mb3)) FROM `Ｔ２`;
 SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING ucs2)) FROM `Ｔ２`;
 SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING sjis)) FROM `Ｔ２`;
 SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING ujis)) FROM `Ｔ２`;
-SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING utf8)) FROM `Ｔ３`;
+SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING utf8mb3)) FROM `Ｔ３`;
 SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING ucs2)) FROM `Ｔ３`;
 SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING sjis)) FROM `Ｔ３`;
 SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING ujis)) FROM `Ｔ３`;
@@ -69,15 +64,15 @@ SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING ujis)) FROM `Ｔ３`;
 SELECT DISTINCT CHARSET(`Ｃ１`) FROM `Ｔ４`;
 SELECT DISTINCT CHARSET(`Ｃ１`) FROM `Ｔ５`;
 SELECT DISTINCT CHARSET(`Ｃ１`) FROM `Ｔ６`;
-SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING utf8)) FROM `Ｔ４`;
+SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING utf8mb3)) FROM `Ｔ４`;
 SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING ucs2)) FROM `Ｔ４`;
 SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING sjis)) FROM `Ｔ４`;
 SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING ujis)) FROM `Ｔ４`;
-SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING utf8)) FROM `Ｔ５`;
+SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING utf8mb3)) FROM `Ｔ５`;
 SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING ucs2)) FROM `Ｔ５`;
 SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING sjis)) FROM `Ｔ５`;
 SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING ujis)) FROM `Ｔ５`;
-SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING utf8)) FROM `Ｔ６`;
+SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING utf8mb3)) FROM `Ｔ６`;
 SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING ucs2)) FROM `Ｔ６`;
 SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING sjis)) FROM `Ｔ６`;
 SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING ujis)) FROM `Ｔ６`;
@@ -86,15 +81,15 @@ SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING ujis)) FROM `Ｔ６`;
 SELECT DISTINCT CHARSET(`Ｃ１`) FROM `Ｔ７`;
 SELECT DISTINCT CHARSET(`Ｃ１`) FROM `Ｔ８`;
 SELECT DISTINCT CHARSET(`Ｃ１`) FROM `Ｔ９`;
-SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING utf8)) FROM `Ｔ７`;
+SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING utf8mb3)) FROM `Ｔ７`;
 SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING ucs2)) FROM `Ｔ７`;
 SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING sjis)) FROM `Ｔ７`;
 SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING ujis)) FROM `Ｔ７`;
-SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING utf8)) FROM `Ｔ８`;
+SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING utf8mb3)) FROM `Ｔ８`;
 SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING ucs2)) FROM `Ｔ８`;
 SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING sjis)) FROM `Ｔ８`;
 SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING ujis)) FROM `Ｔ８`;
-SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING utf8)) FROM `Ｔ９`;
+SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING utf8mb3)) FROM `Ｔ９`;
 SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING ucs2)) FROM `Ｔ９`;
 SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING sjis)) FROM `Ｔ９`;
 SELECT DISTINCT CHARSET(CONVERT(`Ｃ１` USING ujis)) FROM `Ｔ９`;

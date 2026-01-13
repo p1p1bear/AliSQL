@@ -2,14 +2,13 @@
 # table after fast alter table added unique key". The fix is to make
 # sure index number lookup should go through "index translation table".
 
---source include/have_innodb.inc
 
 # Use FIC for index creation
 set old_alter_table=0;
 
 create table bug53592(a int) engine=innodb row_format=compact;
 
-alter table bug53592 add column b text charset utf8;
+alter table bug53592 add column b text charset utf8mb3;
 
 alter table bug53592 add column c blob not null;
 
@@ -26,7 +25,9 @@ create unique index bug53592_c on bug53592(c(1));
 # To get the correct index number, the code should go through index
 # translation table. Otherwise, it will get the wrong index
 # number and later trigger a server crash.
+SET sql_mode = 'NO_ENGINE_SUBSTITUTION';
 replace into bug53592 values (),();
+SET sql_mode = default;
 
 check table bug53592;
 
@@ -37,7 +38,7 @@ set old_alter_table=1;
 
 create table bug53592(a int) engine=innodb row_format=compact;
 
-alter table bug53592 add column b text charset utf8;
+alter table bug53592 add column b text charset utf8mb3;
 
 alter table bug53592 add column c blob not null;
 
@@ -52,12 +53,16 @@ create unique index bug53592_c on bug53592(c(1));
 # To get the correct index number, the code should go through index
 # translation table. Otherwise, it will get the wrong index
 # number and later trigger a server crash.
+SET sql_mode = 'NO_ENGINE_SUBSTITUTION';
 replace into bug53592 values (),();
+SET sql_mode = default;
 
 check table bug53592;
 drop table bug53592;
 
 # Test a dup key reported by foreign key constriant.
+SET restrict_fk_on_non_standard_key=OFF;
+
 CREATE TABLE bug53592_1(
   col1 int, col2 int,
   PRIMARY KEY  (col1, col2)
@@ -68,6 +73,7 @@ CREATE TABLE bug53592_2 (
   FOREIGN KEY (col) REFERENCES bug53592_1 (col1)
     ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB;
+SET restrict_fk_on_non_standard_key=ON;
 
 INSERT INTO bug53592_1 VALUES (1, 2);
 INSERT INTO bug53592_1 VALUES (3, 4);

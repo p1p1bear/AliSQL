@@ -6,7 +6,9 @@
 # having columns that are smaller (shorter) than the slave.      #
 ##################################################################
 
--- source include/master-slave.inc
+-- source include/not_group_replication_plugin.inc
+-- source include/rpl/set_privilege_checks_user_as_system_user.inc
+-- source include/rpl/init_source_replica.inc
 
 --disable_warnings
 DROP TABLE IF EXISTS t1;
@@ -14,14 +16,17 @@ DROP TABLE IF EXISTS t1;
 
 --echo **** Testing WL#3228 changes. ****
 --echo *** Create "wider" table on slave ***
---source include/sync_slave_sql_with_master.inc
-STOP SLAVE;
---source include/wait_for_slave_to_stop.inc
-RESET SLAVE;
-RESET MASTER;
+--source include/rpl/sync_to_replica.inc
+STOP REPLICA;
+--source include/rpl/wait_for_replica_to_stop.inc
+RESET REPLICA;
+RESET BINARY LOGS AND GTIDS;
 
-SET @saved_slave_type_conversions = @@slave_type_conversions;
-SET GLOBAL SLAVE_TYPE_CONVERSIONS = 'ALL_NON_LOSSY';
+SET @saved_replica_type_conversions = @@replica_type_conversions;
+SET GLOBAL REPLICA_TYPE_CONVERSIONS = 'ALL_NON_LOSSY';
+
+#Get default engine value          WL#6921
+--let $DEFAULT_ENGINE = `select @@global.default_storage_engine`
 
 eval CREATE TABLE t1 (
   a float     (47),
@@ -69,12 +74,12 @@ eval CREATE TABLE t1 (
   t LONGTEXT
 );
 
-RESET MASTER;
+RESET BINARY LOGS AND GTIDS;
 
 --echo *** Start replication ***
 connection slave;
-START SLAVE;
---source include/wait_for_slave_to_start.inc
+START REPLICA;
+--source include/rpl/wait_for_replica_to_start.inc
 
 --echo *** Insert data on master and display it. ***
 connection master;
@@ -105,7 +110,7 @@ INSERT INTO t1 () VALUES (
 SELECT * FROM t1 ORDER BY a;
 
 --echo *** Select data from slave to compare ***
---source include/sync_slave_sql_with_master.inc
+--source include/rpl/sync_to_replica.inc
 
 # Replace values in columns that display differently between SBR & RBR
 --replace_column 5 # 8 #
@@ -137,7 +142,7 @@ CREATE TABLE t1 (
 );
 
 --let $sync_slave_connection= slave
---source include/sync_slave_sql_with_master.inc
+--source include/rpl/sync_to_replica.inc
 
 --echo Alter varchar table on slave
 ALTER TABLE t1 CHANGE COLUMN a a VARCHAR(100);
@@ -153,15 +158,17 @@ INSERT INTO t1 VALUES ("This is a test of col a.",
                        "This is a test of the large col c.",
                        "Col d");
 SELECT * FROM t1;
---replace_result default DEFAULT
+#Replace default engine value with static engine string          WL#6921
+--replace_result $DEFAULT_ENGINE ENGINE default DEFAULT
 SHOW CREATE TABLE t1;
 
 --let $sync_slave_connection= slave
---source include/sync_slave_sql_with_master.inc
+--source include/rpl/sync_to_replica.inc
 
 --echo Insert some values and select them on slave
 SELECT * FROM t1;
---replace_result default DEFAULT
+#Replace default engine value with static engine string          WL#6921
+--replace_result $DEFAULT_ENGINE ENGINE default DEFAULT
 SHOW CREATE TABLE t1;
 
 
@@ -186,7 +193,7 @@ CREATE TABLE t1 (
 );
 
 --echo Create bit table on slave
---source include/sync_slave_sql_with_master.inc
+--source include/rpl/sync_to_replica.inc
 
 DROP TABLE t1;
 CREATE TABLE t1 (
@@ -209,15 +216,17 @@ INSERT INTO t1 VALUES (
   );
 
 SELECT BIN(a), BIN(b), BIN(c), BIN(d), BIN(e) FROM t1;
---replace_result default DEFAULT
+#Replace default engine value with static engine string          WL#6921
+--replace_result $DEFAULT_ENGINE ENGINE default DEFAULT
 SHOW CREATE TABLE t1;
 
 --let $sync_slave_connection= slave
---source include/sync_slave_sql_with_master.inc
+--source include/rpl/sync_to_replica.inc
 
 --echo Insert some values and select them on master
 SELECT BIN(a), BIN(b), BIN(c), BIN(d), BIN(e) FROM t1;
---replace_result default DEFAULT
+#Replace default engine value with static engine string          WL#6921
+--replace_result $DEFAULT_ENGINE ENGINE default DEFAULT
 SHOW CREATE TABLE t1;
 
 ###############################################################################
@@ -230,7 +239,7 @@ SHOW CREATE TABLE t1;
 # Steps to reproduce:
 #  1) Create a table t1
 #  2) Change it's definition on slave, so that insert will create conversion
-#     temporary table on slave (set SLAVE_TYPE_CONVERSIONS appropriately to
+#     temporary table on slave (set REPLICA_TYPE_CONVERSIONS appropriately to
 #     allow the scenario)
 #  3) Create a table t2
 #  4) Create a trigger on top of table t1. Inside the trigger, insert a tuple
@@ -264,7 +273,7 @@ INSERT INTO t1 VALUES (
   );
 
 # Step 6) Make sure this insert is replicated without any issues.
---source include/sync_slave_sql_with_master.inc
+--source include/rpl/sync_to_replica.inc
 
 # End of test for Bug#19704825
 
@@ -272,9 +281,9 @@ INSERT INTO t1 VALUES (
 connection master;
 DROP TABLE t1;
 DROP TABLE t2;
---source include/sync_slave_sql_with_master.inc
+--source include/rpl/sync_to_replica.inc
 
-SET GLOBAL SLAVE_TYPE_CONVERSIONS = @saved_slave_type_conversions;
+SET GLOBAL REPLICA_TYPE_CONVERSIONS = @saved_replica_type_conversions;
 
 # END 5.1 Test Case
---source include/rpl_end.inc
+--source include/rpl/deinit.inc

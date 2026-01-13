@@ -1,36 +1,42 @@
-# Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2025, Oracle and/or its affiliates.
 #
 # This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; version 2 of the License.
+# it under the terms of the GNU General Public License, version 2.0,
+# as published by the Free Software Foundation.
+#
+# This program is designed to work with certain software (including
+# but not limited to OpenSSL) that is licensed under separate terms,
+# as designated in a particular file or component or in included license
+# documentation.  The authors of MySQL hereby grant you an additional
+# permission to link the program and your derivative works with the
+# separately licensed software that they have either included with
+# the program or referenced in the documentation.
 #
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+# GNU General Public License, version 2.0, for more details.
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
 
-INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/include
-                    ${CMAKE_SOURCE_DIR}/include/mysql
-                    ${CMAKE_SOURCE_DIR}/regex
-                    ${CMAKE_SOURCE_DIR}/sql
-                    ${SSL_INCLUDE_DIRS}
-                    ${CMAKE_SOURCE_DIR}/unittest/mytap
-                    ${CMAKE_SOURCE_DIR}/storage/perfschema)
+IF(DISABLE_ALL_PSI)
+  RETURN()
+ENDIF()
 
-ADD_DEFINITIONS(-DMYSQL_SERVER ${SSL_DEFINES})
+DISABLE_MISSING_PROFILE_WARNING()
+ADD_DEFINITIONS(-DMYSQL_SERVER)
 
-ADD_CONVENIENCE_LIBRARY(pfs_server_stubs pfs_server_stubs.cc)
+ADD_LIBRARY(pfs_server_stubs STATIC pfs_server_stubs.cc)
+TARGET_LINK_LIBRARIES(pfs_server_stubs extra::rapidjson ext::zlib)
 
 ADD_DEPENDENCIES(pfs_server_stubs GenError)
 
 MACRO (PFS_ADD_TEST name)
-  ADD_EXECUTABLE(${name}-t ${name}-t.cc)
-  TARGET_LINK_LIBRARIES(${name}-t mytap perfschema mysys pfs_server_stubs)
-  ADD_TEST(${name} ${name}-t)
+  MYSQL_ADD_EXECUTABLE(${name}-t ${name}-t.cc ADD_TEST ${name})
+  TARGET_LINK_LIBRARIES(${name}-t
+    mytap perfschema mysys pfs_server_stubs strings ext::icu)
 ENDMACRO()
 
 SET(tests
@@ -41,35 +47,36 @@ SET(tests
  pfs_account-oom
  pfs_host-oom
  pfs_user-oom
+ pfs_noop
  pfs
  pfs_misc
+ pfs_mem
 )
 FOREACH(testname ${tests})
   PFS_ADD_TEST(${testname})
+  DOWNGRADE_STRINGOP_WARNINGS(${testname}-t)
 ENDFOREACH()
 
-IF(WIN32)
-  SET(MYSQLD_EXTRA_SOURCES ${CMAKE_SOURCE_DIR}/sql/nt_servc.cc)
+# Add sql_builtin.cc, to force linkage of plugins below.
+IF(NOT WITH_SHARED_UNITTEST_LIBRARY)
+  LIST(APPEND MYSQLD_EXTRA_SOURCES ${CMAKE_BINARY_DIR}/sql/sql_builtin.cc)
+ENDIF()
+
+# For static server_unittest_library we need to explicitly link in everything
+# referenced in sql/sql_builtin.cc
+IF(WITH_SHARED_UNITTEST_LIBRARY)
+  UNSET(MYSQLD_EXTRA_LIBRARIES)
+ELSE()
+  SET(MYSQLD_EXTRA_LIBRARIES ${MYSQLD_STATIC_PLUGIN_LIBS})
 ENDIF()
 
 # We need the server libs to test the blob parser.
-# Add sql_builtin.cc here, to force linkage of plugins below.
-# Also add mysys/string.c (see Bug#45488)
-ADD_EXECUTABLE(pfs_connect_attr-t
+MYSQL_ADD_EXECUTABLE(pfs_connect_attr-t
   pfs_connect_attr-t.cc
-  ${CMAKE_BINARY_DIR}/sql/sql_builtin.cc
-  ${CMAKE_SOURCE_DIR}/mysys/string.c
-  ${MYSQLD_EXTRA_SOURCES}
-)
-ADD_DEPENDENCIES(pfs_connect_attr-t GenServerSource)
-TARGET_LINK_LIBRARIES(pfs_connect_attr-t mytap perfschema)
-# We need to explicitly link in everything referenced in sql/sql_builtin.cc
-TARGET_LINK_LIBRARIES(pfs_connect_attr-t ${MYSQLD_STATIC_PLUGIN_LIBS})
-TARGET_LINK_LIBRARIES(pfs_connect_attr-t sql binlog rpl master slave sql)
-TARGET_LINK_LIBRARIES(pfs_connect_attr-t mysys mysys_ssl)
-TARGET_LINK_LIBRARIES(pfs_connect_attr-t vio ${SSL_LIBRARIES})
-TARGET_LINK_LIBRARIES(pfs_connect_attr-t strings dbug regex mysys ${ZLIB_LIBRARY})
-ADD_TEST(pfs_connect_attr pfs_connect_attr-t)
-
-# On windows, pfs_connect_attr-t may depend on openssl dlls.
-COPY_OPENSSL_DLLS(copy_openssl_pfs_unittest)
+  ADD_TEST pfs_connect_attr
+  DEPENDENCIES GenServerSource
+  LINK_LIBRARIES
+  mytap
+  server_unittest_library
+  ${MYSQLD_EXTRA_LIBRARIES}
+  )

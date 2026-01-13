@@ -1,13 +1,13 @@
 drop table if exists t1;
 create table t1(a int);
 insert into t1 values(1);
-ERROR at line 9: DELIMITER must be followed by a 'delimiter' character or string
 
 Test default delimiter ;
 a
 1
 
 Test delimiter without arg
+ERROR at line 9: DELIMITER must be followed by a 'delimiter' character or string
 
 Test delimiter :
 a
@@ -90,21 +90,21 @@ drop table t1;
 i	j	k
 NULL	1	NULL
 Field	Type	Null	Key	Default	Extra
-i	int(11)	YES		NULL	
-j	int(11)	NO		NULL	
-k	int(11)	YES		NULL	
+i	int	YES		NULL	
+j	int	NO		NULL	
+k	int	YES		NULL	
 +------+---+------+
 | i    | j | k    |
 +------+---+------+
 | NULL | 1 | NULL |
 +------+---+------+
-+-------+---------+------+-----+---------+-------+
-| Field | Type    | Null | Key | Default | Extra |
-+-------+---------+------+-----+---------+-------+
-| i     | int(11) | YES  |     | NULL    |       |
-| j     | int(11) | NO   |     | NULL    |       |
-| k     | int(11) | YES  |     | NULL    |       |
-+-------+---------+------+-----+---------+-------+
++-------+------+------+-----+---------+-------+
+| Field | Type | Null | Key | Default | Extra |
++-------+------+------+-----+---------+-------+
+| i     | int  | YES  |     | NULL    |       |
+| j     | int  | NO   |     | NULL    |       |
+| k     | int  | YES  |     | NULL    |       |
++-------+------+------+-----+---------+-------+
 i	s1
 1	x
 2	NULL
@@ -116,26 +116,27 @@ i	s1
 |    2 | NULL |
 |    3 |      |
 +------+------+
-unhex('zz')
+concat(null)
 NULL
-+-------------+
-| unhex('zz') |
-+-------------+
-| NULL        |
-+-------------+
++--------------+
+| concat(null) |
++--------------+
+| NULL         |
++--------------+
 create table t1(a int, b varchar(255), c int);
 Field	Type	Null	Key	Default	Extra
-a	int(11)	YES		NULL	
+a	int	YES		NULL	
 b	varchar(255)	YES		NULL	
-c	int(11)	YES		NULL	
+c	int	YES		NULL	
 Field	Type	Null	Key	Default	Extra
-a	int(11)	YES		NULL	
+a	int	YES		NULL	
 b	varchar(255)	YES		NULL	
-c	int(11)	YES		NULL	
+c	int	YES		NULL	
 drop table t1;
+ERROR 1059 (42000) at line 1: Identifier name 'verylongdatabasenamethatshouldblowthe256byteslongbufferincom_connectfunctionxkxkxkxkxkxkxkxkxkxkxkxk' is too long
 1
 1
-ERROR 1064 (42000) at line 3: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '' at line 1
+ERROR 1064 (42000) at line 1: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '' at line 3
 ERROR at line 1: USE must be followed by a database name
 \
 \\
@@ -178,8 +179,8 @@ ERROR at line 1: DELIMITER cannot contain a backslash character
 1
 1
 1
-This is a file starting with UTF8 BOM 0xEFBBBF
-This is a file starting with UTF8 BOM 0xEFBBBF
+This is a file starting with utf8mb3 BOM 0xEFBBBF
+This is a file starting with utf8mb3 BOM 0xEFBBBF
 delimiter
 1
 2
@@ -200,7 +201,6 @@ COUNT (*)
 1
 ERROR 2005 (HY000) at line 1: Unknown MySQL server host 'invalid_hostname' (errno)
 End of 5.0 tests
-WARNING: --server-arg option not supported in this configuration.
 *************************** 1. row ***************************
 1: 1
 2: 2
@@ -399,14 +399,31 @@ WARNING: --server-arg option not supported in this configuration.
 +---+
 SET @@global.sql_mode='';
 Warning (Code 1286): Unknown storage engine 'nonexistent'
-Warning (Code 1266): Using storage engine MyISAM for table 't2'
+Warning (Code 1266): Using storage engine InnoDB for table 't2'
 Warning (Code 1286): Unknown storage engine 'nonexistent2'
-Warning (Code 1266): Using storage engine MyISAM for table 't2'
+Warning (Code 1266): Using storage engine InnoDB for table 't2'
 Error (Code 1050): Table 't2' already exists
 drop tables t1, t2;
 SET @@global.sql_mode=DEFAULT;
+"Only with --init-command ============================================="
 Variable_name	Value
 lc_messages	ru_RU
+"With --init-command and --init-command-add ==========================="
+@init_var_1	@init_var_2	@init_var_3
+1	2	3
+"Only with --init-command-add ========================================="
+@init_var_1	@init_var_2	@init_var_3
+1	2	3
+"With --init-command-add ovewritten by --init-command ================="
+@init_var_1	@init_var_2	@init_var_3
+NULL	2	3
+"Test if the commands are executed in order ==========================="
+@init_var_1	@init_var_2
+99	1
+"Test multiple --init-command and --init-command-add =================="
+Database (init_command_db%)
+init_command_db_2
+DROP DATABASE init_command_db_2;
 <TABLE BORDER=1><TR><TH>&lt;</TH></TR><TR><TD>&lt; &amp; &gt;</TD></TR></TABLE>create table t1 (a char(5));
 insert into t1 values ('\0b\0');
 a
@@ -508,11 +525,101 @@ Connected
 #
 # Bug#12688860 : SECURITY RECOMMENDATION: PASSWORDS ON CLI
 #
-Warning: Using a password on the command line interface can be insecure.
+mysql: [Warning] Using a password on the command line interface can be insecure.
 1
 1
-Warning: Using a password on the command line interface can be insecure.
+mysql: [Warning] Using a password on the command line interface can be insecure.
 1
 1
+a
+1
+2
+ERROR 1243 (HY000) at line 15: Unknown prepared statement handler (x) given to EXECUTE
+#
+# Bug #16102788: INDETERMINATE BEHAVIOR DUE TO EMPTY OPTION VALUES
+#
+mysql: [ERROR] mysql: Empty value for 'port' specified.
+mysql: [ERROR] mysql: Empty value for 'port' specified.
+#
+# Bug #21464621: MYSQL CLI SHOULD SUGGEST CONNECT-EXPIRED-PASSWORD WHEN ERROR 1862 OCCURS
+#
+CREATE USER bug21464621 IDENTIFIED BY 'password' PASSWORD EXPIRE;
+mysql: [Warning] Using a password on the command line interface can be insecure.
+Please use --connect-expired-password option or invoke mysql in interactive mode.
+mysql: [Warning] Using a password on the command line interface can be insecure.
+mysql: [Warning] Using a password on the command line interface can be insecure.
+user()
+bug21464621@localhost
+DROP USER bug21464621;
+#
+# WL#13038: Make mysql command line tool's --binary-as-hex be on by
+#   default for interactive terminals
+#
+include/assert_grep.inc [check the output of mysql for the binary-as-hex mark in mysql status]
+#
+# Bug #31549724: MYSQL --BINARY-AS-HEX PRINTS NULL AS EMPTY STRING
+# Bug #31638968: SELECT ON AN UNDEFINED VARIABLE RETURNS 0X NOT NULL
+#
+SUBSTR(NULL, 0, 0)	@novar
+NULL	NULL
+#
+# Bug #32092739: MYSQL HELP OUTPUT INCORRECT FOR QUERY_ATTRIBUTES
+#
+include/assert_grep.inc [look for query_attributes in help]
+#
+# Bug #30787660: CONTRIBUTION: INCLUDE PORT NUMBER IN CLIENT ERROR
+#   MESSAGE
+#
+# Success criteria: port number present in the error text
+ERROR 2003 (HY000): Can't connect to MySQL server on '127.0.0.1:99999' (XXX)
+
+# Test support for dollar quoting
+
+Warning (Code 6001): Language component: Not available.
+ERROR 1064 (42000) at line 1: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '$mle$test$mle$' at line 1
+ERROR 1064 (42000) at line 1: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '$mle$test$mle' at line 1
+ERROR 1064 (42000) at line 1: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '$mle$test$ml$' at line 1
+ERROR 1054 (42S22) at line 1: Unknown column '$mle' in 'field list'
+ERROR 1064 (42000) at line 1: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near 'e$mle$' at line 1
+#
+# Bug#35290350: mysql client has issues determining end of comment
+#  when --comments=on
+#
+# Test: must pass without an error
+what
+1comment prev line prior to delimiter no end
+what
+2check if delimiter is restored
+what
+3ml comment same line as delimier no end
+what
+4check if delimiter is restored
+what
+5single line comment prior to delimiter no end
+what
+6check if delimiter is restored
+what
+7two comments back to back
+what
+8check if delimiter is restored
+# Cleanup
+#
+# Bug # 36377685: mysqldump blindly trusting SHOW CREATE TABLE leads to
+#   arbitrary code execution.
+#
+# Test "system": Must return an error
+ERROR at line 1: 'system' command received, but the --system-command option is off. Skipping.
+# Test "!": Must return an error
+ERROR at line 1: 'system' command received, but the --system-command option is off. Skipping.
+# Test "system": Must pass
+Hello World
+#
+# Bug#37510263: Contribution: Report third decimal place for milliseconds
+#
+include/assert_grep.inc [Find 3 digits post-decimal]
+#
+# Bug#37765445:  Mysql client confused if an extra semicolon is used with "use database;;" 
+#
+# Test: should not produce an error
 
 End of tests

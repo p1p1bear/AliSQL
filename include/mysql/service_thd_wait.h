@@ -1,13 +1,21 @@
-/* Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+/* Copyright (c) 2010, 2025, Oracle and/or its affiliates.
 
    This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; version 2 of the License.
+   it under the terms of the GNU General Public License, version 2.0,
+   as published by the Free Software Foundation.
+
+   This program is designed to work with certain software (including
+   but not limited to OpenSSL) that is licensed under separate terms,
+   as designated in a particular file or component or in included license
+   documentation.  The authors of MySQL hereby grant you an additional
+   permission to link the program and your derivative works with the
+   separately licensed software that they have either included with
+   the program or referenced in the documentation.
 
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
+   GNU General Public License, version 2.0, for more details.
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
@@ -16,11 +24,13 @@
 #ifndef MYSQL_SERVICE_THD_WAIT_INCLUDED
 #define MYSQL_SERVICE_THD_WAIT_INCLUDED
 
+#include <assert.h>
+
 /**
   @file include/mysql/service_thd_wait.h
   This service provides functions for plugins and storage engines to report
   when they are going to sleep/stall.
-  
+
   SYNOPSIS
   thd_wait_begin() - call just before a wait begins
   thd                     Thread object
@@ -45,10 +55,11 @@
   improve performance as the thread pool will be more active at managing the
   thread workload.
 */
-
-#ifdef __cplusplus
-extern "C" {
+#ifndef __cplusplus
+#error "Not compiling as C++"
 #endif
+
+class THD;
 
 /*
   One should only report wait events that could potentially block for a
@@ -62,43 +73,87 @@ extern "C" {
   that could easily be for many milliseconds or even seconds and the same
   holds true for global read locks, table locks and other meta data locks.
   Another event of interest is going to sleep for an extended time.
-*/
-typedef enum _thd_wait_type_e {
-  THD_WAIT_SLEEP= 1,
-  THD_WAIT_DISKIO= 2,
-  THD_WAIT_ROW_LOCK= 3,
-  THD_WAIT_GLOBAL_LOCK= 4,
-  THD_WAIT_META_DATA_LOCK= 5,
-  THD_WAIT_TABLE_LOCK= 6,
-  THD_WAIT_USER_LOCK= 7,
-  THD_WAIT_BINLOG= 8,
-  THD_WAIT_GROUP_COMMIT= 9,
-  THD_WAIT_SYNC= 10,
-  THD_WAIT_NET= 11,
-  THD_WAIT_LAST= 12
-} thd_wait_type;
 
-extern struct thd_wait_service_st {
-  void (*thd_wait_begin_func)(MYSQL_THD, int);
-  void (*thd_wait_end_func)(MYSQL_THD);
-} *thd_wait_service;
+  Note that user-level locks no longer use THD_WAIT_USER_LOCK wait type.
+  Since their implementation relies on metadata locks manager it uses
+  THD_WAIT_META_DATA_LOCK instead.
+*/
+
+enum THD_wait_type : int {
+  THD_WAIT_NONE = 0,
+  THD_WAIT_SLEEP = 1,
+  THD_WAIT_DISKIO = 2,
+  THD_WAIT_ROW_LOCK = 3,
+  THD_WAIT_GLOBAL_LOCK = 4,
+  THD_WAIT_META_DATA_LOCK = 5,
+  THD_WAIT_TABLE_LOCK = 6,
+  THD_WAIT_USER_LOCK = 7,
+  THD_WAIT_BINLOG = 8,
+  THD_WAIT_GROUP_COMMIT = 9,
+  THD_WAIT_SYNC = 10,
+  THD_WAIT_TRX_DELAY = 11,
+  THD_WAIT_LAST = 12
+};
+
+inline const char *THD_wait_type_str(THD_wait_type twt) {
+  switch (twt) {
+    case THD_WAIT_NONE:
+      return "Not waiting";
+
+    case THD_WAIT_SLEEP:
+      return "Waiting for sleep";
+
+    case THD_WAIT_DISKIO:
+      return "Waiting for Disk IO";
+
+    case THD_WAIT_ROW_LOCK:
+      return "Waiting for row lock";
+
+    case THD_WAIT_GLOBAL_LOCK:
+      return "Waiting for global lock";
+
+    case THD_WAIT_META_DATA_LOCK:
+      return "Waiting for metadata lock";
+
+    case THD_WAIT_TABLE_LOCK:
+      return "Waiting for table lock";
+
+    case THD_WAIT_USER_LOCK:
+      return "Waiting for user lock";
+
+    case THD_WAIT_BINLOG:
+      return "Waiting for binlog";
+
+    case THD_WAIT_GROUP_COMMIT:
+      return "Waiting for group commit";
+
+    case THD_WAIT_SYNC:
+      return "Waiting for fsync";
+
+    case THD_WAIT_TRX_DELAY:
+      return "Waiting for transaction delay";
+
+    case THD_WAIT_LAST:
+      return "<Unused LAST marker value>";
+  }  // switch
+  assert(false);
+  return "<Invalid THD_WAIT value>";
+}
+
+struct thd_wait_service_st {
+  void (*thd_wait_begin_func)(THD *, int);
+  void (*thd_wait_end_func)(THD *);
+};
 
 #ifdef MYSQL_DYNAMIC_PLUGIN
-
-#define thd_wait_begin(_THD, _WAIT_TYPE) \
-  thd_wait_service->thd_wait_begin_func(_THD, _WAIT_TYPE)
-#define thd_wait_end(_THD) thd_wait_service->thd_wait_end_func(_THD)
-
-#else
-
-void thd_wait_begin(MYSQL_THD thd, int wait_type);
-void thd_wait_end(MYSQL_THD thd);
-
-#endif
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif
-
+// We do not support these callbacks for dynamic plugins. To enforce this we
+// provide a conflicting declaration for them, so it becomes impossible to use
+// them.
+void thd_wait_begin();
+void thd_wait_end();
+#else  /* MYSQL_DYNAMIC_PLUGIN */
+// e.g. ha_innodb (static plugin)
+void thd_wait_begin(THD *thd, int wait_type);
+void thd_wait_end(THD *thd);
+#endif /* MYSQL_DYNAMIC_PLUGIN */
+#endif /* MYSQL_SERVICE_THD_WAIT_INCLUDED */

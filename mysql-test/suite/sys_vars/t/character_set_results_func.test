@@ -4,7 +4,7 @@
 # Scope: GLOBAL | SESSION                                                     #
 # Access Type: Dynamic                                                        #
 # Data Type: string                                                           #
-# Default Value: utf8 (session), latin1 (global)                              #
+# Default Value: utf8mb3 (session), latin1 (global)                              #
 # Range: NA                                                                   #
 #                                                                             #
 #                                                                             #
@@ -29,7 +29,7 @@ SET @global_character_set_results = @@global.character_set_results;
 SET @session_character_set_results = @@session.character_set_results;
 
 
-SET @@global.character_set_results = utf8;
+SET @@global.character_set_results = utf8mb3;
 --echo 'connect (con1,localhost,root,,,,)'
 connect (con1,localhost,root,,,,);
 --echo 'connection con1'
@@ -44,6 +44,8 @@ disconnect con1;
 # Begin the functionality Testing of character_set_results  #
 #############################################################
 
+--character_set latin1
+
 --echo 'connection default'
 connection default;
 
@@ -51,8 +53,8 @@ connection default;
 DROP TABLE IF EXISTS t1;
 --enable_warnings
 
-CREATE TABLE t1(b CHAR(40) character set utf8);
-SET NAMES utf8;
+CREATE TABLE t1(b CHAR(40) character set utf8mb3);
+SET NAMES utf8mb3;
 
 #==============================================================================
 --echo '----check string literals against different character_set_results---'
@@ -61,12 +63,15 @@ SET NAMES utf8;
 SET @@session.character_set_results = greek;
 SELECT 'ЁЂЃЄ' AS utf_text;
 
+--character_set latin1
 --echo check effect of character_set_results when introducers are used
 SET @@session.character_set_results = latin1;
 SELECT _latin1'M�ller' AS latin1_text;
 SET @@session.character_set_results = ascii;
 SELECT _latin1'M�ller' AS latin1_text;
 
+
+--character_set utf8mb4
 --echo check when we dont want any conversion
 SET @@session.character_set_results = NULL;
 SELECT 'ЁЂЃЄ' AS utf_text;
@@ -74,13 +79,13 @@ SELECT 'ЁЂЃЄ' AS utf_text;
 #==============================================================================
 --echo '---check results from table against different character_set_results--'
 #==============================================================================
-INSERT INTO t1 VALUES(_utf8'ЁЂЃЄ');
+INSERT INTO t1 VALUES(_utf8mb3'ЁЂЃЄ');
 INSERT INTO t1 VALUES('ФХЦЧШ');
 
 SET @@session.character_set_results = NULL;
 SELECT b, CHAR_LENGTH(b) FROM t1;
 
-SET @@session.character_set_results = utf8;
+SET @@session.character_set_results = utf8mb3;
 SELECT b, CHAR_LENGTH(b) FROM t1;
 
 SET @@session.character_set_results = koi8r;

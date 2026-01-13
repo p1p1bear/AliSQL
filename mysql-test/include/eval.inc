@@ -20,7 +20,7 @@
 #
 #     It is also possible to nest sub-statements on this form, like:
 #       [master:SHOW BINLOG EVENTS FROM
-#        [slave:SHOW SLAVE STATUS, Master_Log_Pos, 1],
+#        [slave:SHOW REPLICA STATUS, Source_Log_Pos, 1],
 #        1, Position]
 #
 #   [SQL_STATEMENT]
@@ -34,7 +34,7 @@
 #
 # ==== Usage ====
 #
-# --let $eval_expr= [SHOW SLAVE STATUS, Relay_Log_Pos, 1] + 47
+# --let $eval_expr= [SHOW REPLICA STATUS, Relay_Log_Pos, 1] + 47
 # [--let $eval_no_result= 1]
 # [--let $rpl_debug= 1]
 # --source include/eval.inc
@@ -57,6 +57,14 @@
 #   expression is instead evaluated as it is and the result is not
 #   stored anywhere.
 #
+# $eval_escape
+#   By default, this script passes $eval_expr within single quotes to
+#   the server in an SQL statement.  Therefore, any single quotes and
+#   backslashes appearing in $eval_expr must be escaped by the caller.
+#   If $eval_escape==1, this script escapes any single quotes that
+#   appear in $eval_expr, so the caller does not have to know how this
+#   script processes quotes.
+#
 # $rpl_debug
 #   Print extra debug info.
 #
@@ -68,14 +76,18 @@
 
 if ($rpl_debug)
 {
-  --echo # debug: eval_expr='$eval_expr' eval_no_result='$eval_no_result'
+  --echo # debug: eval_expr='$eval_expr' eval_no_result='$eval_no_result' eval_escape='$eval_escape'
 }
 
 --let $_eval_old_connection= $CURRENT_CONNECTION
 
 # Evaluate square brackets in expr.
 --let $_eval_substmt_number= 1
---let $_eval_expr_interp= '$eval_expr'
+--let $_eval_expr_interp = $eval_expr
+if ($eval_escape) {
+  --let $_eval_expr_interp = escape('\,$_eval_expr_interp)
+}
+--let $_eval_expr_interp = '$_eval_expr_interp'
 --let $_eval_rbracket= `SELECT LOCATE(']', $_eval_expr_interp)`
 while ($_eval_rbracket)
 {
@@ -114,7 +126,7 @@ while ($_eval_rbracket)
       --echo # debug: connection='$_eval_connection' sub-statement=$_eval_substmt
     }
     --let $rpl_connection_name= $_eval_connection
-    --source include/rpl_connection.inc
+    --source include/connection.inc
   }
   if (!$_eval_connection)
   {
@@ -142,7 +154,7 @@ while ($_eval_rbracket)
   if ($_eval_connection)
   {
     --let $rpl_connection_name= $_eval_old_connection
-    --source include/rpl_connection.inc
+    --source include/connection.inc
   }
 
   if ($rpl_debug)
@@ -156,7 +168,6 @@ while ($_eval_rbracket)
   --let $_eval_expr_interp= `SELECT QUOTE(REPLACE($_eval_expr_interp, '<$_eval_substmt_number>', '$_eval_substmt_result'))`
 
   --let $_eval_rbracket= `SELECT LOCATE(']', $_eval_expr_interp)`
-
   --inc $_eval_substmt_number
 }
 

@@ -1,7 +1,7 @@
-include/master-slave.inc
+include/rpl/init_source_replica.inc
 Warnings:
 Note	####	Sending passwords in plain text without SSL/TLS is extremely insecure.
-Note	####	Storing MySQL user name or password information in the master info repository is not secure and is therefore not recommended. Please consider using the USER and PASSWORD connection options for START SLAVE; see the 'START SLAVE Syntax' in the MySQL Manual for more information.
+Note	####	Storing MySQL user name or password information in the connection metadata repository is not secure and is therefore not recommended. Please consider using the USER and PASSWORD connection options for START REPLICA; see the 'START REPLICA Syntax' in the MySQL Manual for more information.
 [connection master]
 CREATE TABLE test.t1 (a INT AUTO_INCREMENT KEY, t CHAR(6)) ENGINE=INNODB;
 CREATE TABLE test.t2 (a INT AUTO_INCREMENT KEY, f INT, FOREIGN KEY(a) REFERENCES test.t1(a) ON DELETE CASCADE) ENGINE=INNODB;
@@ -14,9 +14,13 @@ create procedure test.p2(IN i INT)
 begin
 DELETE FROM test.t1 where a < i;
 end|
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
 
 < -- test 1 call p1 -- >
 ------------------------
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
 SET FOREIGN_KEY_CHECKS=1;
 call test.p1('texas');
 call test.p1('Live');
@@ -24,9 +28,13 @@ call test.p1('next');
 call test.p1('to');
 call test.p1('OK');
 call test.p1('MySQL');
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
 
 < -- test 1 select master after p1 -- >
 ---------------------------------------
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
 SELECT * FROM test.t1;
 a	t
 1	texas
@@ -43,10 +51,14 @@ a	f
 4	4
 5	5
 6	6
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
 
 < -- test 1 select slave after p1 -- >
 --------------------------------------
-include/sync_slave_sql_with_master.inc
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
+include/rpl/sync_to_replica.inc
 SELECT * FROM test.t1;
 a	t
 1	texas
@@ -63,9 +75,13 @@ a	f
 4	4
 5	5
 6	6
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
 
 < -- test 1 call p2 & select master -- >
 ----------------------------------------
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
 call test.p2(4);
 SELECT * FROM test.t1;
 a	t
@@ -77,10 +93,14 @@ a	f
 4	4
 5	5
 6	6
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
 
 < -- test 1 select slave after p2 -- >
 --------------------------------------
-include/sync_slave_sql_with_master.inc
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
+include/rpl/sync_to_replica.inc
 SELECT * FROM test.t1;
 a	t
 4	to
@@ -91,9 +111,13 @@ a	f
 4	4
 5	5
 6	6
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
 
 < -- End test 1 Begin test 2 -- >
 ---------------------------------
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
 SET FOREIGN_KEY_CHECKS=0;
 DROP PROCEDURE IF EXISTS test.p1;
 DROP PROCEDURE IF EXISTS test.p2;
@@ -117,9 +141,13 @@ CALL test.p1(3,'next');
 CALL test.p1(4,'to');
 CALL test.p1(5,'OK');
 CALL test.p1(6,'MySQL');
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
 
 < -- test 2 select Master after p1 -- >
 ---------------------------------------
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
 SELECT * FROM test.t1;
 a	t
 1	texas
@@ -136,10 +164,14 @@ a	f
 4	6
 5	6
 6	6
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
 
 < -- test 2 select Slave after p1 -- >
 --------------------------------------
-include/sync_slave_sql_with_master.inc
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
+include/rpl/sync_to_replica.inc
 SELECT * FROM test.t1;
 a	t
 1	texas
@@ -156,9 +188,13 @@ a	f
 4	6
 5	6
 6	6
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
 
 < -- test 2 call p2 & select Master -- >
 ----------------------------------------
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
 CALL test.p2(2);
 CALL test.p2(4);
 CALL test.p2(6);
@@ -178,10 +214,14 @@ a	f
 20	6
 40	6
 60	6
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
 
 < -- test 1 select Slave after p2 -- >
 --------------------------------------
-include/sync_slave_sql_with_master.inc
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
+include/rpl/sync_to_replica.inc
 SELECT * FROM test.t1;
 a	t
 1	texas
@@ -198,9 +238,13 @@ a	f
 20	6
 40	6
 60	6
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
 
 < -- End test 2 Begin test 3 -- >
 ---------------------------------
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
 CREATE TABLE test.t3 (a INT AUTO_INCREMENT KEY, t CHAR(6))ENGINE=INNODB;
 CREATE PROCEDURE test.p3(IN n INT)
 begin
@@ -216,7 +260,7 @@ START TRANSACTION;
 ROLLBACK;
 select * from test.t3;
 a	t
-include/sync_slave_sql_with_master.inc
+include/rpl/sync_to_replica.inc
 select * from test.t3;
 a	t
 START TRANSACTION;
@@ -224,7 +268,7 @@ COMMIT;
 select * from test.t3;
 a	t
 98	NONE
-include/sync_slave_sql_with_master.inc
+include/rpl/sync_to_replica.inc
 select * from test.t3;
 a	t
 98	NONE
@@ -236,4 +280,4 @@ DROP PROCEDURE test.p2;
 DROP TABLE test.t1;
 DROP TABLE test.t2;
 DROP TABLE test.t3;
-include/rpl_end.inc
+include/rpl/deinit.inc

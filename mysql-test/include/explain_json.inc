@@ -1,11 +1,14 @@
 # This file is a collection of regression and coverage tests
 # for WL#5855: Print EXPLAIN in JSON format
 
---source include/have_innodb.inc
+--source include/force_myisam_default.inc
+--source include/have_myisam.inc
+--source include/elide_costs.inc
+# This test doesn't support GTID
+--source include/rpl/set_gtid_mode_off.inc
 
-set @save_storage_engine= @@default_storage_engine;
-set default_storage_engine=MyISAM;
 set end_markers_in_json=on;
+SET explain_json_format_version = 1;
 
 --echo # new "FORMAT" keyword doesn't conflict with the FORMAT() function name:
 
@@ -53,10 +56,15 @@ EXECUTE stmt;
 INSERT INTO t1 VALUES (1), (2), (3), (4), (5), (6), (7);
 INSERT INTO t2 VALUES (1), (2);
 
+--echo # Check materialized derived table
+
+set @optimizer_switch_saved= @@optimizer_switch;
+set optimizer_switch='derived_merge=off';
 EXPLAIN
 SELECT * FROM (SELECT * FROM (SELECT * FROM (SELECT a1.i FROM (SELECT * FROM t1) a1, t2) a2) a3) a4;
 EXPLAIN FORMAT=JSON
 SELECT * FROM (SELECT * FROM (SELECT * FROM (SELECT a1.i FROM (SELECT * FROM t1) a1, t2) a2) a3) a4;
+set optimizer_switch= @optimizer_switch_saved;
 
 --echo # subquery in WHERE
 EXPLAIN             SELECT * FROM t1 WHERE i IN (SELECT i FROM t2 WHERE t1.i = 10 ORDER BY RAND());
@@ -99,9 +107,11 @@ EXPLAIN FORMAT=JSON (SELECT * FROM t1) UNION (SELECT * FROM t2) ORDER BY (SELECT
 
 --echo # subquery in the GROUP BY clause
 
+--source include/turn_off_only_full_group_by.inc
 --let $query=SELECT * FROM t1 GROUP BY i > ALL (SELECT i FROM t2) OR i < ALL (SELECT i FROM t2);
 --eval EXPLAIN $query
 --eval EXPLAIN FORMAT=JSON $query
+--source include/restore_sql_mode_after_turn_off_only_full_group_by.inc
 
 --echo # subquery in the SELECT list
 
@@ -138,7 +148,7 @@ DROP TABLE t1, t2, t3, t4;
 --echo # semi-join materialization (if enabled)
 
 CREATE TABLE t1 (a INT);
-INSERT INTO t1 VALUES (1), (1), (1);
+INSERT INTO t1 VALUES (1), (1), (1), (1), (1), (1), (1), (1), (1), (1), (1), (1);
 CREATE TABLE t2 (a INT) SELECT * FROM t1;
 CREATE TABLE t3 (a INT) SELECT * FROM t1;
 CREATE TABLE t4 (a INT) SELECT * FROM t1;
@@ -156,7 +166,7 @@ DROP TABLE t1, t2, t3, t4;
 CREATE TABLE t1 (
   i1 INTEGER NOT NULL,
   c1 VARCHAR(1) NOT NULL
-) ENGINE=InnoDB;
+) charset latin1 ENGINE=InnoDB;
 
 INSERT INTO t1 VALUES (2,'w');
 
@@ -165,14 +175,14 @@ CREATE TABLE t2 (
   c1 VARCHAR(1) NOT NULL,
   c2 VARCHAR(1) NOT NULL,
   KEY (c1, i1)
-) ENGINE=InnoDB;
+) charset latin1 ENGINE=InnoDB;
 
 INSERT INTO t2 VALUES (8,'d','d');
 INSERT INTO t2 VALUES (4,'v','v');
 
 CREATE TABLE t3 (
   c1 VARCHAR(1) NOT NULL
-) ENGINE=InnoDB;
+) charset latin1 ENGINE=InnoDB;
 
 INSERT INTO t3 VALUES ('v');
 
@@ -180,9 +190,9 @@ EXPLAIN FORMAT=json
 SELECT i1
 FROM t1
 WHERE EXISTS (SELECT t2.c1
-              FROM (t2 INNER JOIN t3 ON (t3.c1 = t2.c1)) 
+              FROM (t2 INNER JOIN t3 ON (t3.c1 = t2.c1))
               WHERE t2.c2 != t1.c1 AND t2.c2 = (SELECT MIN(t3.c1)
-                                                FROM t3)); 
+                                                FROM t3));
 
 DROP TABLE t1, t2, t3;
 
@@ -201,8 +211,8 @@ INSERT INTO t5 VALUES (1), (2), (3);
 
 --echo # This should show two materialization groups where applicable
 
-let $query=SELECT * FROM t5 
-  WHERE c IN (SELECT t2.c FROM t1 JOIN t2 ON t2.c_key = t1.c_key) 
+let $query=SELECT * FROM t5
+  WHERE c IN (SELECT t2.c FROM t1 JOIN t2 ON t2.c_key = t1.c_key)
     AND c IN (SELECT t4.c FROM t3 JOIN t4 ON t4.c_key = t3.c_key);
 --eval EXPLAIN $query
 --eval EXPLAIN FORMAT=JSON $query
@@ -248,8 +258,9 @@ DROP TABLE t1, t2, t3;
 
 --echo # Various queries
 
+--source include/turn_off_only_full_group_by.inc
 let $query=
-  SELECT a, b FROM 
+  SELECT a, b FROM
     (SELECT 1 AS a, 2 AS b
      UNION ALL
      SELECT 1 AS a, 2 AS b) t1
@@ -257,6 +268,7 @@ let $query=
   ORDER BY b DESC;
 --eval EXPLAIN $query
 --eval EXPLAIN FORMAT=JSON $query
+--source include/restore_sql_mode_after_turn_off_only_full_group_by.inc
 
 --echo #
 
@@ -285,14 +297,17 @@ INSERT INTO t2 SELECT i, i * 10 FROM t1;
 let $query=SELECT * FROM t1 ORDER BY (SELECT t2.j FROM t2 WHERE t2.i = t1.i);
 --eval EXPLAIN $query
 --eval EXPLAIN FORMAT=JSON $query
+--source include/turn_off_only_full_group_by.inc
 let $query=SELECT * FROM t1 GROUP BY (SELECT t2.j FROM t2 WHERE t2.i = t1.i);
 --eval EXPLAIN $query
 --eval EXPLAIN FORMAT=JSON $query
+--source include/restore_sql_mode_after_turn_off_only_full_group_by.inc
 DROP TABLE t1, t2;
 
-CREATE TABLE t1 (a INT NOT NULL, b INT NOT NULL, PRIMARY KEY(a, b));
+CREATE TABLE t1 (a INT NOT NULL, b INT NOT NULL, KEY k1 (a, b));
 INSERT INTO t1 VALUES (10,1),(10,2),(10,3),(20,4),(20,5),(20,6),
-  (30,7),(30,8),(30,9),(40,10),(40,11),(40,12),(40,13);
+  (30,7),(30,8),(30,9),(40,10),(40,11),(40,12),(40,13),
+  (40,14),(40,15),(40,16),(40,17),(40,18),(40,19),(40,20);
 
 EXPLAIN FORMAT=JSON SELECT a, MIN(b) AS b FROM t1 GROUP BY a ORDER BY b;
 
@@ -300,9 +315,9 @@ DROP TABLE t1;
 
 --echo #
 
-CREATE TABLE t1 (a INT NOT NULL, b CHAR(3) NOT NULL, PRIMARY KEY (a));
+CREATE TABLE t1 (a INT NOT NULL, b CHAR(3) NOT NULL, PRIMARY KEY (a)) charset utf8mb4;
 INSERT INTO t1 VALUES (1,'ABC'), (2,'EFG'), (3,'HIJ');
-CREATE TABLE t2 (a INT NOT NULL,b CHAR(3) NOT NULL,PRIMARY KEY (a, b));
+CREATE TABLE t2 (a INT NOT NULL,b CHAR(3) NOT NULL,PRIMARY KEY (a, b)) charset utf8mb4;
 INSERT INTO t2 VALUES (1,'a'),(1,'b'),(3,'F');
 
 EXPLAIN FORMAT=JSON SELECT t1.a, GROUP_CONCAT(t2.b) AS b FROM t1 LEFT JOIN t2 ON t1.a=t2.a GROUP BY t1.a ORDER BY t1.b;
@@ -333,7 +348,9 @@ let $query=SELECT DISTINCT SUM(b) s FROM t1 GROUP BY a ORDER BY s;
 --eval EXPLAIN FORMAT=JSON $query
 FLUSH STATUS;
 --eval $query
+--disable_warnings
 SHOW SESSION STATUS WHERE (Variable_name LIKE 'Sort_%' OR Variable_name LIKE 'Created_%_tables') AND Value > 0;
+--enable_warnings
 
 DROP TABLE t1;
 
@@ -343,7 +360,9 @@ CREATE TABLE t1 (a INT NOT NULL);
 CREATE TABLE t2 (a INT NOT NULL, PRIMARY KEY (a));
 INSERT INTO t1 VALUES (1);
 INSERT INTO t2 VALUES (1),(2);
+--source include/turn_off_only_full_group_by.inc
 EXPLAIN FORMAT=JSON SELECT SQL_BIG_RESULT DISTINCT t1.a FROM t1,t2 ORDER BY t2.a;
+--source include/restore_sql_mode_after_turn_off_only_full_group_by.inc
 DROP TABLE t1, t2;
 
 --echo #
@@ -355,4 +374,370 @@ INSERT INTO t2 VALUES (2), (3), (4), (5);
 EXPLAIN FORMAT=JSON SELECT * FROM t2 WHERE t2.a IN (SELECT a FROM t1 WHERE t1.b <> 30);
 DROP TABLE t1, t2;
 
-set default_storage_engine= @save_storage_engine;
+--echo #
+--echo # WL#11350 extensions
+--echo #
+CREATE TABLE r(a INT);
+INSERT INTO r VALUES (1), (2), (-1), (-2);
+CREATE TABLE s(a INT);
+INSERT INTO s VALUES (1), (10), (20), (-10), (-20);
+CREATE TABLE t(a INT);
+INSERT INTO t VALUES (10), (100), (200), (-100), (-200);
+ANALYZE TABLE r,s,t;
+
+--echo # Test nesting structures
+let $query =
+         ( ( SELECT * FROM r UNION
+             (SELECT * FROM s ORDER BY a LIMIT 1)) UNION
+           ( SELECT * FROM s UNION SELECT 2 LIMIT 3)
+            ORDER BY 1 LIMIT 3)
+         ORDER BY 1;
+
+eval EXPLAIN FORMAT=json $query;
+--echo # For comparison
+--replace_regex $elide_costs
+eval EXPLAIN FORMAT=tree $query;
+
+--echo # Test no result if no materializaton
+EXPLAIN FORMAT=json SELECT 1 UNION ALL SELECT 2;
+
+--echo # Used to not show sorting before WL#11350
+EXPLAIN FORMAT=json (SELECT a FROM r LIMIT 2) ORDER BY 1;
+
+EXPLAIN FORMAT=json ((SELECT a FROM t ORDER BY 1 limit 3) ORDER BY -a limit 2) order by a;
+
+--echo # Test big one
+let $query =
+     (SELECT * FROM r
+      UNION SELECT * FROM s);
+let $1=200;
+while ($1)
+{
+ let $query =
+     ($query
+      UNION SELECT * FROM s);
+ dec $1;
+}
+
+--echo # This query has max nesting and should work
+eval EXPLAIN FORMAT=json $query;
+
+--echo #
+--echo # INTERSECT operator
+--echo #
+let $query = SELECT * FROM r INTERSECT SELECT * FROM s;
+
+eval EXPLAIN FORMAT = json $query;
+
+let $query = SELECT * FROM r INTERSECT ALL SELECT * FROM s;
+eval EXPLAIN FORMAT = json $query;
+
+--echo #
+--echo # EXCEPT operator
+--echo #
+let $query = SELECT * FROM r EXCEPT SELECT * FROM s;
+
+eval EXPLAIN FORMAT = json $query;
+
+let $query = SELECT * FROM r EXCEPT ALL SELECT * FROM s;
+eval EXPLAIN FORMAT = json $query;
+
+DROP TABLE r, s, t;
+
+--echo #
+--echo # Bug#34463119 WL#349 Assertion `current_context->type == CTX_JOIN || ..
+--echo #              at opt_explain_json.cc
+--echo #
+CREATE TABLE t(pk int NOT NULL AUTO_INCREMENT, PRIMARY KEY (pk));
+
+EXPLAIN FORMAT=JSON
+SELECT * FROM (SELECT * FROM t) AS alias1
+              JOIN
+              t AS alias2
+WHERE alias1.pk NOT IN (SELECT 2 INTERSECT SELECT 1) AND
+      alias1.pk = 105;
+DROP TABLE t;
+
+--echo #
+--echo #  WL#15684 System variable to select JSON EXPLAIN format
+--echo #
+SET @@end_markers_in_json=OFF;
+SET @@explain_json_format_version = 1;
+
+CREATE TABLE t (i INT);
+INSERT INTO t VALUES (1), (2), (3);
+ANALYZE TABLE t;
+
+EXPLAIN FORMAT=JSON SELECT * FROM t WHERE i IN (2, 3) LIMIT 1;
+
+SET @@explain_json_format_version = 2;
+
+EXPLAIN FORMAT=JSON SELECT * FROM t WHERE i IN (2, 3) LIMIT 1;
+
+SET @@explain_json_format_version = 1;
+
+DELIMITER |;
+--echo # Check changing system variable in stored procedure works as expected.
+# First and third EXPLAIN use the session value for explain_json_format_version from when the procedure was prepared.
+# Second and fourth EXPLAIN use the session value for explain_json_format_version from the first PREPARE.
+# Fifth EXPLAIN uses the passed json_format_version value for explain_json_format_version.
+# JSON format version 2 contains a top level "query" field that version 1 does not.
+CREATE PROCEDURE p (json_format_version INT) BEGIN
+  EXPLAIN FORMAT=JSON INTO @v1 SELECT * FROM t WHERE i IN (2, 3) LIMIT 1;
+  SELECT JSON_CONTAINS_PATH(@v1, 'one', '$.query') + 1 AS explain_json_format_version;
+
+  SET @stmt_txt = 'EXPLAIN FORMAT=JSON INTO @v1 SELECT * FROM t WHERE i IN (2, 3) LIMIT 1';
+  PREPARE stmt FROM @stmt_txt;
+  EXECUTE stmt;
+  SELECT JSON_CONTAINS_PATH(@v1, 'one', '$.query') + 1 AS explain_json_format_version;
+
+  SET @@explain_json_format_version = json_format_version;
+  EXPLAIN FORMAT=JSON INTO @v1 SELECT * FROM t WHERE i IN (2, 3) LIMIT 1;
+  SELECT JSON_CONTAINS_PATH(@v1, 'one', '$.query') + 1 AS explain_json_format_version;
+
+  EXECUTE stmt;
+  SELECT JSON_CONTAINS_PATH(@v1, 'one', '$.query') + 1 AS explain_json_format_version;
+
+  PREPARE stmt FROM @stmt_txt;
+  EXECUTE stmt;
+  SELECT JSON_CONTAINS_PATH(@v1, 'one', '$.query') + 1 AS explain_json_format_version;
+END|
+DELIMITER ;|
+
+SET @@explain_json_format_version = 2;
+
+# Expect the system variable to be set by the procedure.
+CALL p(1);
+SELECT @@explain_json_format_version;
+CALL p(2);
+SELECT @@explain_json_format_version;
+
+DROP PROCEDURE p;
+DROP TABLE t;
+SET @@end_markers_in_json=ON;
+SET @@explain_json_format_version = DEFAULT;
+
+--echo #
+--echo # Bug#36134568 Add query type to iterator-based EXPLAIN FORMAT=JSON
+--echo #
+
+SET @@explain_json_format_version = 2;
+
+CREATE TABLE t1 (i1 INT PRIMARY KEY, i2 INT);
+CREATE TABLE t2 (i3 INT, i4 INT);
+INSERT INTO t1 VALUES (1,2), (2,3), (3,4);
+INSERT INTO t2 SELECT i2, i1 FROM t1;
+ANALYZE TABLE t1, t2;
+
+EXPLAIN FORMAT=JSON INTO @v1 SELECT * FROM t1 JOIN t2 ON i1 = i3 WHERE i2 = 2;
+SELECT JSON_EXTRACT(@v1, '$.query_type') = 'select';
+
+SET @v1 = NULL;
+
+EXPLAIN FORMAT=JSON INTO @v1 SELECT * FROM t1;
+SELECT JSON_EXTRACT(@v1, '$.query_type') = 'select';
+
+SET @v1 = NULL;
+
+EXPLAIN FORMAT=JSON INTO @v1 INSERT INTO t1 VALUES (4,5);
+SELECT JSON_EXTRACT(@v1, '$.query_type') = 'insert';
+
+SET @v1 = NULL;
+
+EXPLAIN FORMAT=JSON INTO @v1 INSERT INTO t1 SELECT * FROM t2;
+SELECT JSON_EXTRACT(@v1, '$.query_type') = 'insert';
+
+SET @v1 = NULL;
+
+EXPLAIN FORMAT=JSON INTO @v1 UPDATE t1 SET i2 = i2 + 1 WHERE i1 = 1;
+SELECT JSON_EXTRACT(@v1, '$.query_type') = 'update';
+
+SET @v1 = NULL;
+
+EXPLAIN FORMAT=JSON INTO @v1 REPLACE t1 SELECT * FROM t2;
+SELECT JSON_EXTRACT(@v1, '$.query_type') = 'replace';
+
+SET @v1 = NULL;
+
+EXPLAIN FORMAT=JSON INTO @v1 DELETE FROM t1;
+SELECT JSON_EXTRACT(@v1, '$.query_type') = 'delete';
+
+SET @v1 = NULL;
+
+EXPLAIN FORMAT=JSON INTO @v1 UPDATE t1, t2 SET i1 = i1 - 1, i3 = i3 + 1;
+SELECT JSON_EXTRACT(@v1, '$.query_type') = 'update';
+
+SET @v1 = NULL;
+
+EXPLAIN FORMAT=JSON INTO @v1 DELETE t1, t2 FROM t1, t2;
+SELECT JSON_EXTRACT(@v1, '$.query_type') = 'delete';
+
+DROP TABLE t1, t2;
+SET @v1=NULL;
+SET @@explain_json_format_version = DEFAULT;
+
+--echo #
+--echo # Bug#37126176 Add lookup references to iterator-based EXPLAIN FORMAT=JSON for index lookups
+--echo #
+
+SET @@explain_json_format_version = 2;
+
+SET @v1 = NULL;
+CREATE TABLE t (pk INT PRIMARY KEY AUTO_INCREMENT, i INT DEFAULT NULL, INDEX idx(i));
+INSERT INTO t(i) VALUES (3), (2), (1), (NULL);
+ANALYZE TABLE t;
+
+# Even though these plans are mostly pretty simple we use JSON functions to
+# extract the relevant paths from the EXPLAIN output in case the plan should
+# change in the future but still contains the desired path.
+# As long as the EXPLAIN output contains the desired fields and values in the
+# right relative position we do not care about other parts of the plan.
+
+# CONCAT(SUBSTRING_INDEX(path, '.', CHAR_LENGTH - CHAR_LENGTH)) extracts the
+# path to the lookup object found with the JSON_SEARCH.
+# The same effect could probably be achieved with
+# JSON_EXTRACT(@v1, '$**.lookup_references[0]'), but this way we make sure the
+# access type is right and from the right object.
+# This is probably more useful with more complex plans.
+
+--echo # Index lookup shows correct reference type in "lookup_references".
+# Index lookup (REF)
+EXPLAIN FORMAT=JSON INTO @v1 SELECT i FROM t WHERE i = 1;
+SELECT JSON_EXTRACT(@v1,
+  CONCAT(
+    SUBSTRING_INDEX(index_access_type_path, '.',
+      CHAR_LENGTH(index_access_type_path)
+        -
+      CHAR_LENGTH(REPLACE(index_access_type_path, '.', ''))),
+    '.lookup_references[0]'))
+  = "const"
+  AS index_lookup_references_const
+FROM (SELECT JSON_UNQUOTE(JSON_SEARCH(@v1, 'one', 'index_lookup')) AS index_access_type_path) AS t;
+
+SET @v1 = NULL;
+
+# Single-row index lookup (EQ_REF)
+EXPLAIN FORMAT=JSON INTO @v1 SELECT t1.pk FROM t t1, t t2 WHERE t1.pk = t2.pk + 1;
+SELECT JSON_EXTRACT(@v1,
+  CONCAT(
+    SUBSTRING_INDEX(index_access_type_path, '.',
+      CHAR_LENGTH(index_access_type_path)
+        -
+      CHAR_LENGTH(REPLACE(index_access_type_path, '.', ''))),
+    '.lookup_references[0]'))
+  = "func"
+  AS index_lookup_references_func
+FROM (SELECT JSON_UNQUOTE(JSON_SEARCH(@v1, 'one', 'index_lookup')) AS index_access_type_path) AS t;
+
+SET @v1 = NULL;
+
+# Single-row index lookup (EQ_REF)
+# "lookup_references" can be either '["test.t1.pk"]' or '["test.t2.pk"]'.
+# If the plan changes we do not care as long as "lookup_references" contains a
+# fully qualified column name.
+EXPLAIN FORMAT=JSON INTO @v1 SELECT t1.pk FROM t t1, t t2 WHERE t1.pk = t2.pk;
+SELECT JSON_EXTRACT(@v1,
+  CONCAT(
+    SUBSTRING_INDEX(index_access_type_path, '.',
+      CHAR_LENGTH(index_access_type_path)
+        -
+      CHAR_LENGTH(REPLACE(index_access_type_path, '.', ''))),
+    '.lookup_references[0]'))
+  IN ("test.t1.pk", "test.t2.pk")
+  AS index_lookup_references_column
+FROM (SELECT JSON_UNQUOTE(JSON_SEARCH(@v1, 'one', 'index_lookup')) AS index_access_type_path) AS t;
+
+SET @v1 = NULL;
+
+# Index lookup (REF_OR_NULL)
+EXPLAIN FORMAT=JSON INTO @v1 SELECT * FROM t WHERE i = 1 OR i IS NULL;
+SELECT JSON_UNQUOTE(JSON_EXTRACT(@v1,
+  CONCAT(
+    SUBSTRING_INDEX(index_access_type_path, '.',
+      CHAR_LENGTH(index_access_type_path)
+        -
+      CHAR_LENGTH(REPLACE(index_access_type_path, '.', ''))),
+    '.lookup_condition')))
+  LIKE "% or NULL"
+  AS is_ref_or_null
+FROM (SELECT JSON_UNQUOTE(JSON_SEARCH(@v1, 'one', 'index_lookup')) AS index_access_type_path) AS t;
+
+SET @v1 = NULL;
+
+# Multi-range read (MRR)
+SET @saved_optimizer_switch = @@optimizer_switch;
+SET optimizer_switch='batched_key_access=on,mrr=on,mrr_cost_based=off';
+
+EXPLAIN FORMAT=JSON INTO @v1 SELECT /*+ BKA(t2) */ * FROM t t1 LEFT JOIN t t2 ON t1.pk = t2.pk AND t1.i = 1 AND t1.i = 2;
+SELECT JSON_EXTRACT(@v1,
+  CONCAT(
+    SUBSTRING_INDEX(index_access_type_path, '.',
+      CHAR_LENGTH(index_access_type_path)
+        -
+      CHAR_LENGTH(REPLACE(index_access_type_path, '.', ''))),
+    '.lookup_references')) IS NOT NULL
+  AS mrr_has_lookup_references
+FROM (SELECT JSON_UNQUOTE(JSON_SEARCH(@v1, 'one', 'multi_range_read')) AS index_access_type_path) AS t;
+
+SET optimizer_switch = @saved_optimizer_switch;
+
+SET @v1 = NULL;
+DROP TABLE t;
+
+# Fulltext search (FULLTEXT)
+--echo # Fulltext search has "lookup_references", should only show "const"
+CREATE TABLE t (a VARCHAR(200), b TEXT, FULLTEXT (a,b)) ENGINE = InnoDB charset utf8mb4;
+INSERT INTO t VALUES  ('This is a sample text', 'I made up for this test.'),
+                      ('We want to show that fulltext', 'search references a constant in the "lookup_condition".'),
+                      ('In this test the EXPLAIN output', 'should contain a field called "lookup_references".'),
+                      ('"lookup_references" should be an array.', 'That array should contain an element that is "const".'),
+                      ('Function MATCH ... AGAINST()','is used to do a fulltext search.'),
+                      ('Fulltext searches in MySQL', 'are confusing.');
+ANALYZE TABLE t;
+
+EXPLAIN FORMAT=JSON INTO @v1 SELECT * FROM t WHERE MATCH(a,b) AGAINST ("fulltext");
+SELECT JSON_EXTRACT(@v1,
+  CONCAT(
+    SUBSTRING_INDEX(index_access_type_path, '.',
+      CHAR_LENGTH(index_access_type_path)
+        -
+      CHAR_LENGTH(REPLACE(index_access_type_path, '.', ''))),
+    '.lookup_references[0]'))
+  = "const"
+  AS fulltext_search_references_const
+FROM (SELECT JSON_UNQUOTE(JSON_SEARCH(@v1, 'one', 'full_text_search')) AS index_access_type_path) AS t;
+
+SET @v1 = NULL;
+DROP TABLE t;
+
+SET @@explain_json_format_version = DEFAULT;
+
+--echo #
+--echo # Bug#35239659 Separate query attributes and iterator attributes in iterator-based EXPLAIN JSON
+--echo #
+# Not many tests for this since it is tested every time the full JSONv2 format
+# is printed in a test
+
+CREATE TABLE t (i INT);
+# Simple TREE EXPLAIN to show TREE output is not affected
+EXPLAIN FORMAT=TREE SELECT * FROM t t1 JOIN t t2 WHERE t1.i = t2.i;
+
+EXPLAIN FORMAT=JSON INTO @var SELECT * FROM t t1 JOIN t t2 WHERE t1.i = t2.i;
+SELECT JSON_KEYS(@var);
+
+DROP TABLE t;
+SET @var = NULL;
+
+--echo #
+--echo # Bug#37838599 EXPLAIN ANALYZE FORMAT=JSON did not handle queries with
+--echo # subqueries correctly when explain_json_format_version=1.
+--echo #
+SET @@explain_json_format_version = 1;
+
+--error ER_EXPLAIN_ANALYZE_JSON_FORMAT_VERSION_NOT_SUPPORTED
+EXPLAIN ANALYZE FORMAT=JSON SELECT * FROM (SELECT 1) b;
+
+SET @@explain_json_format_version = DEFAULT;
+
+# Restore the default for gtid_mode which is ON
+--source include/rpl/set_gtid_mode_on.inc

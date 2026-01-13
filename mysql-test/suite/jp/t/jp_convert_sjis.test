@@ -1,8 +1,3 @@
---source include/have_sjis.inc
---source include/have_ucs2.inc
---source include/have_ujis.inc
---source include/have_utf8.inc
---source include/have_innodb.inc
 
 --character_set sjis
 SET NAMES sjis;
@@ -50,36 +45,63 @@ CREATE TABLE `‚s‚X` (`‚b‚P` char(20), INDEX(`‚b‚P`)) DEFAULT CHARSET = sjis engi
  LOAD DATA LOCAL INFILE 'suite/jp/std_data/jisx0208_sjis2.dat' INTO TABLE `‚s‚X`;
 
 #InnoDB
-SELECT `‚b‚P`, CONVERT(`‚b‚P` using utf8) FROM `‚s‚P`;
+--sorted_result
+SELECT `‚b‚P`, CONVERT(`‚b‚P` using utf8mb3) FROM `‚s‚P`;
+--sorted_result
 SELECT `‚b‚P`, CONVERT(`‚b‚P` using ucs2) FROM `‚s‚P`;
+--sorted_result
 SELECT `‚b‚P`, CONVERT(`‚b‚P` using ujis) FROM `‚s‚P`;
-SELECT `‚b‚P`, CONVERT(`‚b‚P` using utf8) FROM `‚s‚Q`;
+--sorted_result
+SELECT `‚b‚P`, CONVERT(`‚b‚P` using utf8mb3) FROM `‚s‚Q`;
+--sorted_result
 SELECT `‚b‚P`, CONVERT(`‚b‚P` using ucs2) FROM `‚s‚Q`;
+--sorted_result
 SELECT `‚b‚P`, CONVERT(`‚b‚P` using ujis) FROM `‚s‚Q`;
-SELECT `‚b‚P`, CONVERT(`‚b‚P` using utf8) FROM `‚s‚R`;
+--sorted_result
+SELECT `‚b‚P`, CONVERT(`‚b‚P` using utf8mb3) FROM `‚s‚R`;
+--sorted_result
 SELECT `‚b‚P`, CONVERT(`‚b‚P` using ucs2) FROM `‚s‚R`;
+--sorted_result
 SELECT `‚b‚P`, CONVERT(`‚b‚P` using ujis) FROM `‚s‚R`;
 
 #MyISAM
-SELECT `‚b‚P`, CONVERT(`‚b‚P` using utf8) FROM `‚s‚S`;
+--sorted_result
+SELECT `‚b‚P`, CONVERT(`‚b‚P` using utf8mb3) FROM `‚s‚S`;
+--sorted_result
 SELECT `‚b‚P`, CONVERT(`‚b‚P` using ucs2) FROM `‚s‚S`;
+--sorted_result
 SELECT `‚b‚P`, CONVERT(`‚b‚P` using ujis) FROM `‚s‚S`;
-SELECT `‚b‚P`, CONVERT(`‚b‚P` using utf8) FROM `‚s‚T`;
+--sorted_result
+SELECT `‚b‚P`, CONVERT(`‚b‚P` using utf8mb3) FROM `‚s‚T`;
+--sorted_result
 SELECT `‚b‚P`, CONVERT(`‚b‚P` using ucs2) FROM `‚s‚T`;
+--sorted_result
 SELECT `‚b‚P`, CONVERT(`‚b‚P` using ujis) FROM `‚s‚T`;
-SELECT `‚b‚P`, CONVERT(`‚b‚P` using utf8) FROM `‚s‚U`;
+--sorted_result
+SELECT `‚b‚P`, CONVERT(`‚b‚P` using utf8mb3) FROM `‚s‚U`;
+--sorted_result
 SELECT `‚b‚P`, CONVERT(`‚b‚P` using ucs2) FROM `‚s‚U`;
+--sorted_result
 SELECT `‚b‚P`, CONVERT(`‚b‚P` using ujis) FROM `‚s‚U`;
 
 #MEMORY
-SELECT `‚b‚P`, CONVERT(`‚b‚P` using utf8) FROM `‚s‚V`;
+--sorted_result
+SELECT `‚b‚P`, CONVERT(`‚b‚P` using utf8mb3) FROM `‚s‚V`;
+--sorted_result
 SELECT `‚b‚P`, CONVERT(`‚b‚P` using ucs2) FROM `‚s‚V`;
+--sorted_result
 SELECT `‚b‚P`, CONVERT(`‚b‚P` using ujis) FROM `‚s‚V`;
-SELECT `‚b‚P`, CONVERT(`‚b‚P` using utf8) FROM `‚s‚W`;
+--sorted_result
+SELECT `‚b‚P`, CONVERT(`‚b‚P` using utf8mb3) FROM `‚s‚W`;
+--sorted_result
 SELECT `‚b‚P`, CONVERT(`‚b‚P` using ucs2) FROM `‚s‚W`;
+--sorted_result
 SELECT `‚b‚P`, CONVERT(`‚b‚P` using ujis) FROM `‚s‚W`;
-SELECT `‚b‚P`, CONVERT(`‚b‚P` using utf8) FROM `‚s‚X`;
+--sorted_result
+SELECT `‚b‚P`, CONVERT(`‚b‚P` using utf8mb3) FROM `‚s‚X`;
+--sorted_result
 SELECT `‚b‚P`, CONVERT(`‚b‚P` using ucs2) FROM `‚s‚X`;
+--sorted_result
 SELECT `‚b‚P`, CONVERT(`‚b‚P` using ujis) FROM `‚s‚X`;
 
 drop table `‚s‚P`;

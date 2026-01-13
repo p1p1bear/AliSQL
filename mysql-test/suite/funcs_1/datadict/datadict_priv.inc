@@ -52,7 +52,7 @@ eval CREATE VIEW test.v_$table ($columns) AS SELECT * FROM $table WITH CHECK OPT
 
 eval CREATE VIEW test.v_$table ($columns) AS SELECT * FROM $table;
 
---error ER_NON_UPDATABLE_TABLE
+--error ER_DBACCESS_DENIED_ERROR
 eval UPDATE test.v_$TABLE SET TIME=NOW() WHERE id = 1;
 
 eval DROP VIEW test.v_$table;
@@ -71,7 +71,8 @@ eval REVOKE ALL ON $table FROM current_user;
 --error ER_DBACCESS_DENIED_ERROR
 eval GRANT INSERT,UPDATE ON $table TO current_user;
 
-SHOW GRANTS;
+--let $user = 0
+--source include/show_grants.inc
 
 #----------------------------------------------------------------------
 # table access
@@ -105,6 +106,3 @@ DROP DATABASE information_schema;
 
 --error ER_PARSE_ERROR
 RENAME DATABASE information_schema TO info_schema;
-
---error ER_DBACCESS_DENIED_ERROR
-ALTER DATABASE information_schema UPGRADE DATA DIRECTORY NAME;

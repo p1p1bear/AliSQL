@@ -10,23 +10,23 @@ connection master;
 DROP TABLE IF EXISTS t1;
 
 sync_slave_with_master;
-STOP SLAVE;
+STOP REPLICA;
 eval $test_table_slave;
 
 connection master;
 eval $test_table_master;
 
 --let $rpl_only_running_threads= 1
---source include/rpl_reset.inc
+--source include/rpl/reset.inc
 
 eval $test_insert;
 
 connection slave;
---let $slave_sql_errno= convert_error(ER_SLAVE_CONVERSION_FAILED) # 1677
---source include/wait_for_slave_sql_error.inc
+--let $slave_sql_errno= convert_error(ER_SERVER_REPLICA_CONVERSION_FAILED) # 13146
+--source include/rpl/wait_for_applier_error.inc
 
 # The following should be 0
 SELECT COUNT(*) FROM t1;
-STOP SLAVE;
---source include/rpl_reset.inc
+STOP REPLICA;
+--source include/rpl/reset.inc
 --let $rpl_only_running_threads= 0

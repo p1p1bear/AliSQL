@@ -1,3 +1,9 @@
+# Need MyISAM to support assign_to_keycache
+--source include/force_myisam_default.inc
+--source include/have_myisam.inc
+# This test doesn't support GTID
+--source include/rpl/set_gtid_mode_off.inc
+
 # t/handler_myisam.test
 #
 # test of HANDLER ...
@@ -8,9 +14,6 @@
 #               main testing code put into include/handler.inc
 #               rename t/handler.test to t/handler_myisam.test
 #
-
-# should work in embedded server after mysqltest is fixed
---source include/not_embedded.inc
 
 let $engine_type= MyISAM;
 let $other_engine_type= MEMORY;
@@ -187,5 +190,7 @@ LOAD INDEX INTO CACHE t1;
 --error ER_UNKNOWN_TABLE
 HANDLER t1 READ FIRST;
 
+# Restore the default for gtid_mode which is ON
+--source include/rpl/set_gtid_mode_on.inc
 
 --echo End of 5.1 tests

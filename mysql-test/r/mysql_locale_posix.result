@@ -1,4 +1,6 @@
-SET NAMES utf8;
+SET NAMES utf8mb3;
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
 DROP DATABASE IF EXISTS `Ã³`;
 DROP DATABASE IF EXISTS `Ăł`;
 DROP DATABASE IF EXISTS `цЁ`;
@@ -31,9 +33,9 @@ Database: ó
 +--------+
 +--------+
 
-utf8
+utf8mb3
 @@character_set_client
-utf8
+utf8mb4
 Database: ó
 +--------+
 | Tables |

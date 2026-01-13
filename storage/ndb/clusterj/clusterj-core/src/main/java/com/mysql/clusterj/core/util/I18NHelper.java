@@ -1,15 +1,22 @@
 /*
-   Copyright 2010 Sun Microsystems, Inc.
-   All rights reserved. Use is subject to license terms.
+   Copyright (c) 2010, 2025, Oracle and/or its affiliates.
 
    This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; version 2 of the License.
+   it under the terms of the GNU General Public License, version 2.0,
+   as published by the Free Software Foundation.
+
+   This program is designed to work with certain software (including
+   but not limited to OpenSSL) that is licensed under separate terms,
+   as designated in a particular file or component or in included license
+   documentation.  The authors of MySQL hereby grant you an additional
+   permission to link the program and your derivative works with the
+   separately licensed software that they have either included with
+   the program or referenced in the documentation.
 
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
+   GNU General Public License, version 2.0, for more details.
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
@@ -18,7 +25,10 @@
 
 package com.mysql.clusterj.core.util;
 
-import java.util.*;
+import java.util.function.Supplier;
+import java.util.Hashtable;
+import java.util.Locale;
+import java.util.ResourceBundle;
 import java.text.MessageFormat;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -187,6 +197,17 @@ public class I18NHelper {
         return getMessage (bundle, messageKey, args);
     }
 
+    /** Message formatter returning a Supplier<String>
+     *
+     *  NOTE: This can be used to work around the fact that a variable in a
+     *  closure must be "effectively final". But it should be used sparingly;
+     *  it can provide an illusion of efficiency that it doesn't really deliver.
+     */
+    public Supplier<String> supplier (String messageKey, Object... args) {
+        assertBundle (messageKey);
+        return () -> getMessage (bundle, messageKey, args);
+    }
+
     /** Message formatter
      * @param messageKey the message key
      * @param arg the argument
@@ -342,7 +363,7 @@ public class I18NHelper {
     final private static String getMessage(ResourceBundle messages, 
             String messageKey, int arg) 
     {
-        Object []args = {new Integer(arg)};
+        Object []args = {Integer.valueOf(arg)};
         return getMessage(messages, messageKey, args);
     }
     

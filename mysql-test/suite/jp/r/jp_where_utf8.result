@@ -7,17 +7,40 @@ drop table if exists `Ｔ６`;
 drop table if exists `Ｔ７`;
 drop table if exists `Ｔ８`;
 drop table if exists `Ｔ９`;
-SET NAMES utf8;
-SET character_set_database = utf8;
-CREATE TABLE `Ｔ１` (`Ｃ１` char(20), INDEX(`Ｃ１`)) DEFAULT CHARSET = utf8 engine = innodb;
-CREATE TABLE `Ｔ２` (`Ｃ１` char(20), INDEX(`Ｃ１`)) DEFAULT CHARSET = utf8 engine = innodb;
-CREATE TABLE `Ｔ３` (`Ｃ１` char(20), INDEX(`Ｃ１`)) DEFAULT CHARSET = utf8 engine = innodb;
-CREATE TABLE `Ｔ４` (`Ｃ１` char(20), INDEX(`Ｃ１`)) DEFAULT CHARSET = utf8 engine = myisam;
-CREATE TABLE `Ｔ５` (`Ｃ１` char(20), INDEX(`Ｃ１`)) DEFAULT CHARSET = utf8 engine = myisam;
-CREATE TABLE `Ｔ６` (`Ｃ１` char(20), INDEX(`Ｃ１`)) DEFAULT CHARSET = utf8 engine = myisam;
-CREATE TABLE `Ｔ７` (`Ｃ１` char(20), INDEX(`Ｃ１`)) DEFAULT CHARSET = utf8 engine = MEMORY;
-CREATE TABLE `Ｔ８` (`Ｃ１` char(20), INDEX(`Ｃ１`)) DEFAULT CHARSET = utf8 engine = MEMORY;
-CREATE TABLE `Ｔ９` (`Ｃ１` char(20), INDEX(`Ｃ１`)) DEFAULT CHARSET = utf8 engine = MEMORY;
+SET NAMES utf8mb3;
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
+SET character_set_database = utf8mb3;
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
+Warning	1681	Updating 'character_set_database' is deprecated. It will be made read-only in a future release.
+CREATE TABLE `Ｔ１` (`Ｃ１` char(20), INDEX(`Ｃ１`)) DEFAULT CHARSET = utf8mb3 engine = innodb;
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
+CREATE TABLE `Ｔ２` (`Ｃ１` char(20), INDEX(`Ｃ１`)) DEFAULT CHARSET = utf8mb3 engine = innodb;
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
+CREATE TABLE `Ｔ３` (`Ｃ１` char(20), INDEX(`Ｃ１`)) DEFAULT CHARSET = utf8mb3 engine = innodb;
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
+CREATE TABLE `Ｔ４` (`Ｃ１` char(20), INDEX(`Ｃ１`)) DEFAULT CHARSET = utf8mb3 engine = myisam;
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
+CREATE TABLE `Ｔ５` (`Ｃ１` char(20), INDEX(`Ｃ１`)) DEFAULT CHARSET = utf8mb3 engine = myisam;
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
+CREATE TABLE `Ｔ６` (`Ｃ１` char(20), INDEX(`Ｃ１`)) DEFAULT CHARSET = utf8mb3 engine = myisam;
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
+CREATE TABLE `Ｔ７` (`Ｃ１` char(20), INDEX(`Ｃ１`)) DEFAULT CHARSET = utf8mb3 engine = MEMORY;
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
+CREATE TABLE `Ｔ８` (`Ｃ１` char(20), INDEX(`Ｃ１`)) DEFAULT CHARSET = utf8mb3 engine = MEMORY;
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
+CREATE TABLE `Ｔ９` (`Ｃ１` char(20), INDEX(`Ｃ１`)) DEFAULT CHARSET = utf8mb3 engine = MEMORY;
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
 LOAD DATA LOCAL INFILE 'suite/jp/std_data/jisx0201_utf8.dat' INTO TABLE `Ｔ１`;
 LOAD DATA LOCAL INFILE 'suite/jp/std_data/jisx0208_utf8.dat' INTO TABLE `Ｔ２`;
 LOAD DATA LOCAL INFILE 'suite/jp/std_data/jisx0212_utf8.dat' INTO TABLE `Ｔ３`;

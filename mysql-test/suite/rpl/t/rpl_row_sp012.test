@@ -8,9 +8,11 @@
 
 
 # Includes
+-- source include/not_group_replication_plugin.inc
 -- source include/have_binlog_format_row.inc
--- source include/not_embedded.inc
--- source include/master-slave.inc
+-- source include/rpl/set_privilege_checks_user_as_system_user.inc
+-- let $rpl_privilege_checks_user_grant_option = 1
+-- source include/rpl/init_source_replica.inc
 
 
 # Begin clean up test section
@@ -20,10 +22,9 @@ DROP PROCEDURE IF EXISTS test.p1;
 DROP PROCEDURE IF EXISTS test.p2;
 DROP PROCEDURE IF EXISTS test.p3;
 
-
 # Begin test section 1 
 # Create user user1 with no particular access rights
-grant usage on *.* to user1@localhost;
+CREATE USER user1@localhost;
 flush privileges;
 
 SELECT CURRENT_USER();
@@ -36,9 +37,9 @@ GRANT EXECUTE ON PROCEDURE p2 TO user1@localhost;
 GRANT EXECUTE ON PROCEDURE p3 TO user1@localhost;
 
 # Need to wait for the rights to be applied at the slave
---source include/sync_slave_sql_with_master.inc
+--source include/rpl/sync_to_replica.inc
 
-let $message=<********  Master user1 p3 & p2 calls *******>;
+let $message=<********  Source user1 p3 & p2 calls *******>;
 --source include/show_msg.inc
 connect (muser1,localhost,user1,,);
 connection muser1;
@@ -69,8 +70,9 @@ DROP PROCEDURE IF EXISTS test.p2;
 DROP TABLE IF EXISTS test.t1;
 DROP TABLE IF EXISTS test.t2;
 DROP USER user1@localhost;
---source include/sync_slave_sql_with_master.inc
+--source include/rpl/sync_to_replica.inc
+--enable_warnings
 
 # End of 5.0 test case
 
---source include/rpl_end.inc
+--source include/rpl/deinit.inc

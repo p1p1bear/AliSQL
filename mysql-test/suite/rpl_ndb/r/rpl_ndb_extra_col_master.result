@@ -1,6 +1,11 @@
-include/master-slave.inc
+include/rpl/init_source_replica.inc
+Warnings:
+Note	####	Sending passwords in plain text without SSL/TLS is extremely insecure.
+Note	####	Storing MySQL user name or password information in the connection metadata repository is not secure and is therefore not recommended. Please consider using the USER and PASSWORD connection options for START REPLICA; see the 'START REPLICA Syntax' in the MySQL Manual for more information.
 [connection master]
-set binlog_format=row;
+set binlog_format='row';
+Warnings:
+Warning	1287	'@@binlog_format' is deprecated and will be removed in a future release.
 
 ***********************************************************
 ***********************************************************
@@ -87,7 +92,7 @@ f1	f2	f3	f4
 27	27	27	next
 29	29	29	second
 30	30	30	next
-include/check_slave_is_running.inc
+include/rpl/assert_replica_running.inc
 
 ***** Testing Altering table def scenario *****
 
@@ -97,13 +102,11 @@ f5 DOUBLE DEFAULT '2.00',
 f6 ENUM('a', 'b', 'c') default 'a',
 f7 DECIMAL(17,9) default '1000.00',
 f8 MEDIUMBLOB,
-f9 NUMERIC(6,4) default '2000.00',
+f9 NUMERIC(6,2) default '2000.00',
 f10 VARCHAR(1024),
 f11 BINARY(20) NOT NULL DEFAULT '\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0',
 f12 SET('a', 'b', 'c') default 'b')
 ENGINE='NDB';
-Warnings:
-Warning	1264	Out of range value for column 'f9' at row 1
 
 CREATE TABLE t3 (f1 INT, f2 INT, f3 INT PRIMARY KEY, f4 CHAR(20),
 /* extra */
@@ -120,13 +123,11 @@ CREATE TABLE t4 (f1 INT, f2 INT, f3 INT PRIMARY KEY, f4 CHAR(20),
 f5 DOUBLE DEFAULT '2.00', 
 f6 DECIMAL(17,9) default '1000.00',
 f7 MEDIUMBLOB,
-f8 NUMERIC(6,4) default '2000.00',
+f8 NUMERIC(6,2) default '2000.00',
 f9 VARCHAR(1024),
 f10 BINARY(20) not null default '\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0',
 f11 CHAR(255))
 ENGINE='NDB';
-Warnings:
-Warning	1264	Out of range value for column 'f8' at row 1
 
 CREATE TABLE t31 (f1 INT, f2 INT, f3 INT PRIMARY KEY, f4 CHAR(20),
 /* extra */
@@ -185,18 +186,15 @@ INSERT into t2 values (2, 2, 2, 'second',
 (3, 3, 3, 'third',
 3.0, 'b', 3000.0003, 'f8: medium size blob', 3000, 'f10: some var char',
 '01234567', 'c');
-Warnings:
-Warning	1264	Out of range value for column 'f9' at row 1
-Warning	1264	Out of range value for column 'f9' at row 2
 INSERT into t3 set f1=1, f2=1, f3=1, f4='first', f10='f10: some var char';
 INSERT into t4 set f1=1, f2=1, f3=1, f4='first', f7='f7: medium size blob', f10='f10:
 binary data';
 INSERT into t31 set f1=1, f2=1, f3=1, f4='first';
-INSERT into t31 set f1=1, f2=1, f3=2, f4='second',
+INSERT IGNORE into t31 set f1=1, f2=1, f3=2, f4='second',
 f9=2.2,  f10='seven samurai', f28=222.222, f35='222';
 Warnings:
 Warning	1366	Incorrect integer value: 'seven samurai' for column 'f10' at row 1
-INSERT into t31 values (1, 1, 3, 'third',
+INSERT IGNORE into t31 values (1, 1, 3, 'third',
 /* f5  BIGINT,  */            333333333333333333333333,
 /* f6  BLOB,  */              '3333333333333333333333',
 /* f7  DATE,  */              '2007-07-18',
@@ -232,7 +230,7 @@ INSERT into t31 values (1, 1, 3, 'third',
 Warnings:
 Warning	1264	Out of range value for column 'f5' at row 1
 Warning	1264	Out of range value for column 'f24' at row 1
-INSERT into t31 values (1, 1, 4, 'fourth',
+INSERT IGNORE into t31 values (1, 1, 4, 'fourth',
 /* f5  BIGINT,  */            333333333333333333333333,
 /* f6  BLOB,  */              '3333333333333333333333',
 /* f7  DATE,  */              '2007-07-18',
@@ -408,7 +406,7 @@ f1	f2	f3	f4
 update t31 set f5=555555555555555 where f3=6;
 update t31 set f2=2 where f3=2;
 update t31 set f1=NULL where f3=1;
-update t31 set f3=NULL, f27=NULL, f35='f35 new value' where f3=3;
+update ignore t31 set f3=NULL, f27=NULL, f35='f35 new value' where f3=3;
 Warnings:
 Warning	1048	Column 'f3' cannot be null
 
@@ -424,17 +422,16 @@ f1	f2	f3	f4
 
 ** Check slave status **
 
-include/check_slave_is_running.inc
+include/rpl/assert_replica_running.inc
 
 ****************************************
 * columns in master at middle of table *
 * Expect: Proper error message         *
 ****************************************
 
-** Stop and Reset Slave **
+** Stop and Reset Replica **
 
-STOP SLAVE;
-RESET SLAVE;
+STOP REPLICA;
 
 ** create table slave side **
 CREATE TABLE t10 (a INT PRIMARY KEY, b BLOB, c CHAR(5)
@@ -444,10 +441,9 @@ CREATE TABLE t10 (a INT PRIMARY KEY, b BLOB, c CHAR(5)
 
 CREATE TABLE t10 (a INT KEY, b BLOB, f DOUBLE DEFAULT '233',
 c CHAR(5), e INT DEFAULT '1')ENGINE='NDB';
-RESET MASTER;
 
-*** Start Slave ***
-START SLAVE;
+*** Start Replica ***
+include/rpl/reset.inc
 
 *** Master Data Insert ***
 set @b1 = 'b1b1b1b1';
@@ -460,8 +456,7 @@ INSERT INTO t10 () VALUES(1,@b1,DEFAULT,'Kyle',DEFAULT),
 *** Expect slave to fail with Error 1677 ***
 ********************************************
 
-include/wait_for_slave_sql_error_and_skip.inc [errno=1677]
-Last_SQL_Error = 'Column 2 of table 'test.t10' cannot be converted from type 'double' to type 'char(5)''
+include/rpl/wait_for_applier_error_and_skip.inc [errno=13146]
 
 *** Drop t10  ***
 DROP TABLE t10;
@@ -472,18 +467,16 @@ DROP TABLE t10;
 *********************************************
 
 *** Create t11 on slave  ***
-STOP SLAVE;
-RESET SLAVE;
+STOP REPLICA;
 CREATE TABLE t11 (a INT PRIMARY KEY, b BLOB, c VARCHAR(254)
 ) ENGINE='NDB';
 
 *** Create t11 on Master ***
 CREATE TABLE t11 (a INT KEY, b BLOB, f TEXT,
 c CHAR(5) DEFAULT 'test', e INT DEFAULT '1')ENGINE='NDB';
-RESET MASTER;
 
-*** Start Slave ***
-START SLAVE;
+*** Start Replica ***
+include/rpl/reset.inc
 
 *** Master Data Insert ***
 set @b1 = 'b1b1b1b1';
@@ -496,8 +489,7 @@ INSERT INTO t11 () VALUES(1,@b1,'Testing is fun','Kyle',DEFAULT),
 *** Expect slave to fail with Error 1677 ***
 ********************************************
 
-include/wait_for_slave_sql_error_and_skip.inc [errno=1677]
-Last_SQL_Error = 'Column 2 of table 'test.t11' cannot be converted from type 'tinyblob' to type 'varchar(254)''
+include/rpl/wait_for_applier_error_and_skip.inc [errno=13146]
 
 *** Drop t11  ***
 DROP TABLE t11;
@@ -508,18 +500,16 @@ DROP TABLE t11;
 *********************************************
 
 *** Create t12 on slave  ***
-STOP SLAVE;
-RESET SLAVE;
+STOP REPLICA;
 CREATE TABLE t12 (a INT PRIMARY KEY, b BLOB, c BLOB
 ) ENGINE='NDB';
 
 *** Create t12 on Master ***
 CREATE TABLE t12 (a INT KEY, b BLOB, f TEXT,
 c CHAR(5) DEFAULT 'test', e INT DEFAULT '1')ENGINE='NDB';
-RESET MASTER;
 
-*** Start Slave ***
-START SLAVE;
+*** Start Replica ***
+include/rpl/reset.inc
 
 *** Master Data Insert ***
 set @b1 = 'b1b1b1b1';
@@ -551,8 +541,7 @@ DROP TABLE t12;
 
 
 *** Create t14 on slave  ***
-STOP SLAVE;
-RESET SLAVE;
+STOP REPLICA;
 CREATE TABLE t14 (c1 INT PRIMARY KEY, c4 BLOB, c5 CHAR(5)
 ) ENGINE='NDB';
 
@@ -561,10 +550,9 @@ CREATE TABLE t14 (c1 INT KEY, c4 BLOB, c5 CHAR(5),
 c6 INT DEFAULT '1',
 c7 TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP
 )ENGINE='NDB';
-RESET MASTER;
 
-*** Start Slave ***
-START SLAVE;
+*** Start Replica ***
+include/rpl/reset.inc
 
 *** Master Data Insert ***
 ALTER TABLE t14 ADD COLUMN c2 DECIMAL(8,2) AFTER c1;
@@ -608,16 +596,14 @@ c1	c3	hex(c4)	c5	c6
 ************
 * Bug30415 *
 ************
-include/wait_for_slave_sql_error.inc [errno=1091]
-Last_SQL_Error = 'Error 'Can't DROP 'c7'; check that column/key exists' on query. Default database: 'test'. Query: 'ALTER TABLE t14 DROP COLUMN c7''
-STOP SLAVE;
-RESET SLAVE;
+include/rpl/wait_for_applier_error.inc [errno=1091]
+STOP REPLICA;
 
 *** Drop t14  ***
 DROP TABLE t14;
 DROP TABLE t14;
-RESET MASTER;
-START SLAVE;
+RESET REPLICA;
+include/rpl/reset.inc
 
 *************************************************
 * - Alter Master adding columns at end of table *
@@ -625,8 +611,7 @@ START SLAVE;
 *************************************************
 
 *** Create t15 on slave  ***
-STOP SLAVE;
-RESET SLAVE;
+STOP REPLICA;
 CREATE TABLE t15 (c1 INT PRIMARY KEY, c4 BLOB, c5 CHAR(5)
 ) ENGINE='NDB';
 
@@ -635,13 +620,14 @@ CREATE TABLE t15 (c1 INT KEY, c4 BLOB, c5 CHAR(5),
 c6 INT DEFAULT '1',
 c7 TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP
 )ENGINE='NDB';
-RESET MASTER;
 
-*** Start Slave ***
-START SLAVE;
+*** Start Replica ***
+include/rpl/reset.inc
 
 *** Master Data Insert ***
 ALTER TABLE t15 ADD COLUMN c2 DECIMAL(8,2) AFTER c7;
+Warnings:
+Warning	1478	Converted FIXED field 'c2' to DYNAMIC to enable online ADD COLUMN
 set @b1 = 'b1b1b1b1';
 set @b1 = concat(@b1,@b1);
 INSERT INTO t15 () VALUES(1,@b1,'Kyle',DEFAULT,DEFAULT,3.00),
@@ -657,16 +643,13 @@ c1	hex(c4)	c5	c6	c7	c2
 *** Expect slave to fail with Error 1054 ***
 ********************************************
 
-include/wait_for_slave_sql_error.inc [errno=1054]
-Last_SQL_Error = 'Error 'Unknown column 'c7' in 't15'' on query. Default database: 'test'. Query: 'ALTER TABLE t15 ADD COLUMN c2 DECIMAL(8,2) AFTER c7''
-STOP SLAVE;
-RESET SLAVE;
+include/rpl/wait_for_applier_error.inc [errno=1054]
+STOP REPLICA;
 
 *** Drop t15  ***
 DROP TABLE t15;
 DROP TABLE t15;
-RESET MASTER;
-START SLAVE;
+include/rpl/reset.inc
 
 ************************************************
 * - Create index on Master column not on slave *
@@ -674,8 +657,7 @@ START SLAVE;
 ************************************************
 
 *** Create t16 on slave  ***
-STOP SLAVE;
-RESET SLAVE;
+STOP REPLICA;
 CREATE TABLE t16 (c1 INT PRIMARY KEY, c4 BLOB, c5 CHAR(5)
 ) ENGINE='NDB';
 
@@ -684,10 +666,9 @@ CREATE TABLE t16 (c1 INT KEY, c4 BLOB, c5 CHAR(5),
 c6 INT DEFAULT '1',
 c7 TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP
 )ENGINE='NDB';
-RESET MASTER;
 
-*** Start Slave ***
-START SLAVE;
+*** Start Replica ***
+include/rpl/reset.inc
 
 *** Master Create Index and Data Insert ***
 CREATE INDEX part_of_c6 ON t16 (c6);
@@ -706,16 +687,13 @@ c1	hex(c4)	c5	c6	c7
 *** BUG 30434 ***
 *****************
 
-include/wait_for_slave_sql_error.inc [errno=1072]
-Last_SQL_Error = 'Error 'Key column 'c6' doesn't exist in table' on query. Default database: 'test'. Query: 'CREATE INDEX part_of_c6 ON t16 (c6)''
-STOP SLAVE;
-RESET SLAVE;
+include/rpl/wait_for_applier_error.inc [errno=1072]
+STOP REPLICA;
 
 *** Drop t16  ***
 DROP TABLE t16;
 DROP TABLE t16;
-RESET MASTER;
-START SLAVE;
+include/rpl/reset.inc
 
 *****************************************************
 * - Delete rows using column on Master not on slave *
@@ -723,8 +701,7 @@ START SLAVE;
 *****************************************************
 
 *** Create t17 on slave  ***
-STOP SLAVE;
-RESET SLAVE;
+STOP REPLICA;
 CREATE TABLE t17 (c1 INT PRIMARY KEY, c4 BLOB, c5 CHAR(5)
 ) ENGINE='NDB';
 
@@ -733,10 +710,9 @@ CREATE TABLE t17 (c1 INT KEY, c4 BLOB, c5 CHAR(5),
 c6 INT DEFAULT '1',
 c7 TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP
 )ENGINE='NDB';
-RESET MASTER;
 
-*** Start Slave ***
-START SLAVE;
+*** Start Replica ***
+include/rpl/reset.inc
 
 *** Master Data Insert ***
 set @b1 = 'b1b1b1b1';
@@ -781,8 +757,7 @@ DROP TABLE t17;
 
 *** Create t18 on slave  ***
 
-STOP SLAVE;
-RESET SLAVE;
+STOP REPLICA;
 CREATE TABLE t18 (c1 INT PRIMARY KEY, c4 BLOB, c5 CHAR(5)
 ) ENGINE='NDB';
 
@@ -791,10 +766,9 @@ CREATE TABLE t18 (c1 INT KEY, c4 BLOB, c5 CHAR(5),
 c6 INT DEFAULT '1',
 c7 TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP
 )ENGINE='NDB';
-RESET MASTER;
 
-*** Start Slave ***
-START SLAVE;
+*** Start Replica ***
+include/rpl/reset.inc
 
 *** Master Data Insert ***
 set @b1 = 'b1b1b1b1';
@@ -838,8 +812,7 @@ DROP TABLE t18;
 *****************************************************
 
 *** Create t5 on slave  ***
-STOP SLAVE;
-RESET SLAVE;
+STOP REPLICA;
 CREATE TABLE t5 (c1 INT PRIMARY KEY, c4 BLOB, c5 CHAR(5)
 ) ENGINE='NDB';
 
@@ -848,10 +821,9 @@ CREATE TABLE t5 (c1 INT KEY, c4 BLOB, c5 CHAR(5),
 c6 LONG, 
 c7 TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP
 )ENGINE='NDB';
-RESET MASTER;
 
-*** Start Slave ***
-START SLAVE;
+*** Start Replica ***
+include/rpl/reset.inc
 
 *** Master Data Insert ***
 set @b1 = 'b1b1b1b1';
@@ -872,25 +844,31 @@ c1	hex(c4)	c5
 3	6231623162316231	QA
 DROP TABLE t5;
 
-include/rpl_reset.inc
-SET NAMES utf8;
+include/rpl/reset.inc
+SET NAMES utf8mb3;
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
 SET SQL_LOG_BIN=0;
-CREATE TABLE t1 (c1 INT NOT NULL, c2 CHAR(255) CHARACTER SET UTF8 NOT NULL) ENGINE='NDB';
+CREATE TABLE t1 (c1 INT NOT NULL, c2 CHAR(255) CHARACTER SET utf8mb3 NOT NULL) ENGINE='NDB';
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
 SET SQL_LOG_BIN=1;
 CREATE TABLE t1 (c1 INT) ENGINE='NDB';
-INSERT INTO t1 VALUES ();
-SET @text= REPEAT(_utf8'ç', 255);
+INSERT IGNORE INTO t1 VALUES ();
+SET @text= REPEAT(_utf8mb3'ç', 255);
 INSERT INTO t1 VALUES (1, @text);
-SELECT * FROM t1;
+SELECT * FROM t1 ORDER BY c1;
 c1	c2
-1	ççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççç
 0	
-SELECT * FROM t1;
+1	ççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççç
+SELECT * FROM t1 ORDER BY c1;
 c1
 0
 1
 DROP TABLE t1;
-set binlog_format=mixed;
+set binlog_format='mixed';
+Warnings:
+Warning	1287	'@@binlog_format' is deprecated and will be removed in a future release.
 
 ***********************************************************
 ***********************************************************
@@ -977,7 +955,7 @@ f1	f2	f3	f4
 27	27	27	next
 29	29	29	second
 30	30	30	next
-include/check_slave_is_running.inc
+include/rpl/assert_replica_running.inc
 
 ***** Testing Altering table def scenario *****
 
@@ -987,13 +965,11 @@ f5 DOUBLE DEFAULT '2.00',
 f6 ENUM('a', 'b', 'c') default 'a',
 f7 DECIMAL(17,9) default '1000.00',
 f8 MEDIUMBLOB,
-f9 NUMERIC(6,4) default '2000.00',
+f9 NUMERIC(6,2) default '2000.00',
 f10 VARCHAR(1024),
 f11 BINARY(20) NOT NULL DEFAULT '\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0',
 f12 SET('a', 'b', 'c') default 'b')
 ENGINE='NDB';
-Warnings:
-Warning	1264	Out of range value for column 'f9' at row 1
 
 CREATE TABLE t3 (f1 INT, f2 INT, f3 INT PRIMARY KEY, f4 CHAR(20),
 /* extra */
@@ -1010,13 +986,11 @@ CREATE TABLE t4 (f1 INT, f2 INT, f3 INT PRIMARY KEY, f4 CHAR(20),
 f5 DOUBLE DEFAULT '2.00', 
 f6 DECIMAL(17,9) default '1000.00',
 f7 MEDIUMBLOB,
-f8 NUMERIC(6,4) default '2000.00',
+f8 NUMERIC(6,2) default '2000.00',
 f9 VARCHAR(1024),
 f10 BINARY(20) not null default '\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0',
 f11 CHAR(255))
 ENGINE='NDB';
-Warnings:
-Warning	1264	Out of range value for column 'f8' at row 1
 
 CREATE TABLE t31 (f1 INT, f2 INT, f3 INT PRIMARY KEY, f4 CHAR(20),
 /* extra */
@@ -1075,18 +1049,15 @@ INSERT into t2 values (2, 2, 2, 'second',
 (3, 3, 3, 'third',
 3.0, 'b', 3000.0003, 'f8: medium size blob', 3000, 'f10: some var char',
 '01234567', 'c');
-Warnings:
-Warning	1264	Out of range value for column 'f9' at row 1
-Warning	1264	Out of range value for column 'f9' at row 2
 INSERT into t3 set f1=1, f2=1, f3=1, f4='first', f10='f10: some var char';
 INSERT into t4 set f1=1, f2=1, f3=1, f4='first', f7='f7: medium size blob', f10='f10:
 binary data';
 INSERT into t31 set f1=1, f2=1, f3=1, f4='first';
-INSERT into t31 set f1=1, f2=1, f3=2, f4='second',
+INSERT IGNORE into t31 set f1=1, f2=1, f3=2, f4='second',
 f9=2.2,  f10='seven samurai', f28=222.222, f35='222';
 Warnings:
 Warning	1366	Incorrect integer value: 'seven samurai' for column 'f10' at row 1
-INSERT into t31 values (1, 1, 3, 'third',
+INSERT IGNORE into t31 values (1, 1, 3, 'third',
 /* f5  BIGINT,  */            333333333333333333333333,
 /* f6  BLOB,  */              '3333333333333333333333',
 /* f7  DATE,  */              '2007-07-18',
@@ -1122,7 +1093,7 @@ INSERT into t31 values (1, 1, 3, 'third',
 Warnings:
 Warning	1264	Out of range value for column 'f5' at row 1
 Warning	1264	Out of range value for column 'f24' at row 1
-INSERT into t31 values (1, 1, 4, 'fourth',
+INSERT IGNORE into t31 values (1, 1, 4, 'fourth',
 /* f5  BIGINT,  */            333333333333333333333333,
 /* f6  BLOB,  */              '3333333333333333333333',
 /* f7  DATE,  */              '2007-07-18',
@@ -1298,7 +1269,7 @@ f1	f2	f3	f4
 update t31 set f5=555555555555555 where f3=6;
 update t31 set f2=2 where f3=2;
 update t31 set f1=NULL where f3=1;
-update t31 set f3=NULL, f27=NULL, f35='f35 new value' where f3=3;
+update ignore t31 set f3=NULL, f27=NULL, f35='f35 new value' where f3=3;
 Warnings:
 Warning	1048	Column 'f3' cannot be null
 
@@ -1314,17 +1285,16 @@ f1	f2	f3	f4
 
 ** Check slave status **
 
-include/check_slave_is_running.inc
+include/rpl/assert_replica_running.inc
 
 ****************************************
 * columns in master at middle of table *
 * Expect: Proper error message         *
 ****************************************
 
-** Stop and Reset Slave **
+** Stop and Reset Replica **
 
-STOP SLAVE;
-RESET SLAVE;
+STOP REPLICA;
 
 ** create table slave side **
 CREATE TABLE t10 (a INT PRIMARY KEY, b BLOB, c CHAR(5)
@@ -1334,10 +1304,9 @@ CREATE TABLE t10 (a INT PRIMARY KEY, b BLOB, c CHAR(5)
 
 CREATE TABLE t10 (a INT KEY, b BLOB, f DOUBLE DEFAULT '233',
 c CHAR(5), e INT DEFAULT '1')ENGINE='NDB';
-RESET MASTER;
 
-*** Start Slave ***
-START SLAVE;
+*** Start Replica ***
+include/rpl/reset.inc
 
 *** Master Data Insert ***
 set @b1 = 'b1b1b1b1';
@@ -1350,8 +1319,7 @@ INSERT INTO t10 () VALUES(1,@b1,DEFAULT,'Kyle',DEFAULT),
 *** Expect slave to fail with Error 1677 ***
 ********************************************
 
-include/wait_for_slave_sql_error_and_skip.inc [errno=1677]
-Last_SQL_Error = 'Column 2 of table 'test.t10' cannot be converted from type 'double' to type 'char(5)''
+include/rpl/wait_for_applier_error_and_skip.inc [errno=13146]
 
 *** Drop t10  ***
 DROP TABLE t10;
@@ -1362,18 +1330,16 @@ DROP TABLE t10;
 *********************************************
 
 *** Create t11 on slave  ***
-STOP SLAVE;
-RESET SLAVE;
+STOP REPLICA;
 CREATE TABLE t11 (a INT PRIMARY KEY, b BLOB, c VARCHAR(254)
 ) ENGINE='NDB';
 
 *** Create t11 on Master ***
 CREATE TABLE t11 (a INT KEY, b BLOB, f TEXT,
 c CHAR(5) DEFAULT 'test', e INT DEFAULT '1')ENGINE='NDB';
-RESET MASTER;
 
-*** Start Slave ***
-START SLAVE;
+*** Start Replica ***
+include/rpl/reset.inc
 
 *** Master Data Insert ***
 set @b1 = 'b1b1b1b1';
@@ -1386,8 +1352,7 @@ INSERT INTO t11 () VALUES(1,@b1,'Testing is fun','Kyle',DEFAULT),
 *** Expect slave to fail with Error 1677 ***
 ********************************************
 
-include/wait_for_slave_sql_error_and_skip.inc [errno=1677]
-Last_SQL_Error = 'Column 2 of table 'test.t11' cannot be converted from type 'tinyblob' to type 'varchar(254)''
+include/rpl/wait_for_applier_error_and_skip.inc [errno=13146]
 
 *** Drop t11  ***
 DROP TABLE t11;
@@ -1398,18 +1363,16 @@ DROP TABLE t11;
 *********************************************
 
 *** Create t12 on slave  ***
-STOP SLAVE;
-RESET SLAVE;
+STOP REPLICA;
 CREATE TABLE t12 (a INT PRIMARY KEY, b BLOB, c BLOB
 ) ENGINE='NDB';
 
 *** Create t12 on Master ***
 CREATE TABLE t12 (a INT KEY, b BLOB, f TEXT,
 c CHAR(5) DEFAULT 'test', e INT DEFAULT '1')ENGINE='NDB';
-RESET MASTER;
 
-*** Start Slave ***
-START SLAVE;
+*** Start Replica ***
+include/rpl/reset.inc
 
 *** Master Data Insert ***
 set @b1 = 'b1b1b1b1';
@@ -1441,8 +1404,7 @@ DROP TABLE t12;
 
 
 *** Create t14 on slave  ***
-STOP SLAVE;
-RESET SLAVE;
+STOP REPLICA;
 CREATE TABLE t14 (c1 INT PRIMARY KEY, c4 BLOB, c5 CHAR(5)
 ) ENGINE='NDB';
 
@@ -1451,10 +1413,9 @@ CREATE TABLE t14 (c1 INT KEY, c4 BLOB, c5 CHAR(5),
 c6 INT DEFAULT '1',
 c7 TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP
 )ENGINE='NDB';
-RESET MASTER;
 
-*** Start Slave ***
-START SLAVE;
+*** Start Replica ***
+include/rpl/reset.inc
 
 *** Master Data Insert ***
 ALTER TABLE t14 ADD COLUMN c2 DECIMAL(8,2) AFTER c1;
@@ -1498,16 +1459,14 @@ c1	c3	hex(c4)	c5	c6
 ************
 * Bug30415 *
 ************
-include/wait_for_slave_sql_error.inc [errno=1091]
-Last_SQL_Error = 'Error 'Can't DROP 'c7'; check that column/key exists' on query. Default database: 'test'. Query: 'ALTER TABLE t14 DROP COLUMN c7''
-STOP SLAVE;
-RESET SLAVE;
+include/rpl/wait_for_applier_error.inc [errno=1091]
+STOP REPLICA;
 
 *** Drop t14  ***
 DROP TABLE t14;
 DROP TABLE t14;
-RESET MASTER;
-START SLAVE;
+RESET REPLICA;
+include/rpl/reset.inc
 
 *************************************************
 * - Alter Master adding columns at end of table *
@@ -1515,8 +1474,7 @@ START SLAVE;
 *************************************************
 
 *** Create t15 on slave  ***
-STOP SLAVE;
-RESET SLAVE;
+STOP REPLICA;
 CREATE TABLE t15 (c1 INT PRIMARY KEY, c4 BLOB, c5 CHAR(5)
 ) ENGINE='NDB';
 
@@ -1525,13 +1483,14 @@ CREATE TABLE t15 (c1 INT KEY, c4 BLOB, c5 CHAR(5),
 c6 INT DEFAULT '1',
 c7 TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP
 )ENGINE='NDB';
-RESET MASTER;
 
-*** Start Slave ***
-START SLAVE;
+*** Start Replica ***
+include/rpl/reset.inc
 
 *** Master Data Insert ***
 ALTER TABLE t15 ADD COLUMN c2 DECIMAL(8,2) AFTER c7;
+Warnings:
+Warning	1478	Converted FIXED field 'c2' to DYNAMIC to enable online ADD COLUMN
 set @b1 = 'b1b1b1b1';
 set @b1 = concat(@b1,@b1);
 INSERT INTO t15 () VALUES(1,@b1,'Kyle',DEFAULT,DEFAULT,3.00),
@@ -1547,16 +1506,13 @@ c1	hex(c4)	c5	c6	c7	c2
 *** Expect slave to fail with Error 1054 ***
 ********************************************
 
-include/wait_for_slave_sql_error.inc [errno=1054]
-Last_SQL_Error = 'Error 'Unknown column 'c7' in 't15'' on query. Default database: 'test'. Query: 'ALTER TABLE t15 ADD COLUMN c2 DECIMAL(8,2) AFTER c7''
-STOP SLAVE;
-RESET SLAVE;
+include/rpl/wait_for_applier_error.inc [errno=1054]
+STOP REPLICA;
 
 *** Drop t15  ***
 DROP TABLE t15;
 DROP TABLE t15;
-RESET MASTER;
-START SLAVE;
+include/rpl/reset.inc
 
 ************************************************
 * - Create index on Master column not on slave *
@@ -1564,8 +1520,7 @@ START SLAVE;
 ************************************************
 
 *** Create t16 on slave  ***
-STOP SLAVE;
-RESET SLAVE;
+STOP REPLICA;
 CREATE TABLE t16 (c1 INT PRIMARY KEY, c4 BLOB, c5 CHAR(5)
 ) ENGINE='NDB';
 
@@ -1574,10 +1529,9 @@ CREATE TABLE t16 (c1 INT KEY, c4 BLOB, c5 CHAR(5),
 c6 INT DEFAULT '1',
 c7 TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP
 )ENGINE='NDB';
-RESET MASTER;
 
-*** Start Slave ***
-START SLAVE;
+*** Start Replica ***
+include/rpl/reset.inc
 
 *** Master Create Index and Data Insert ***
 CREATE INDEX part_of_c6 ON t16 (c6);
@@ -1596,16 +1550,13 @@ c1	hex(c4)	c5	c6	c7
 *** BUG 30434 ***
 *****************
 
-include/wait_for_slave_sql_error.inc [errno=1072]
-Last_SQL_Error = 'Error 'Key column 'c6' doesn't exist in table' on query. Default database: 'test'. Query: 'CREATE INDEX part_of_c6 ON t16 (c6)''
-STOP SLAVE;
-RESET SLAVE;
+include/rpl/wait_for_applier_error.inc [errno=1072]
+STOP REPLICA;
 
 *** Drop t16  ***
 DROP TABLE t16;
 DROP TABLE t16;
-RESET MASTER;
-START SLAVE;
+include/rpl/reset.inc
 
 *****************************************************
 * - Delete rows using column on Master not on slave *
@@ -1613,8 +1564,7 @@ START SLAVE;
 *****************************************************
 
 *** Create t17 on slave  ***
-STOP SLAVE;
-RESET SLAVE;
+STOP REPLICA;
 CREATE TABLE t17 (c1 INT PRIMARY KEY, c4 BLOB, c5 CHAR(5)
 ) ENGINE='NDB';
 
@@ -1623,10 +1573,9 @@ CREATE TABLE t17 (c1 INT KEY, c4 BLOB, c5 CHAR(5),
 c6 INT DEFAULT '1',
 c7 TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP
 )ENGINE='NDB';
-RESET MASTER;
 
-*** Start Slave ***
-START SLAVE;
+*** Start Replica ***
+include/rpl/reset.inc
 
 *** Master Data Insert ***
 set @b1 = 'b1b1b1b1';
@@ -1671,8 +1620,7 @@ DROP TABLE t17;
 
 *** Create t18 on slave  ***
 
-STOP SLAVE;
-RESET SLAVE;
+STOP REPLICA;
 CREATE TABLE t18 (c1 INT PRIMARY KEY, c4 BLOB, c5 CHAR(5)
 ) ENGINE='NDB';
 
@@ -1681,10 +1629,9 @@ CREATE TABLE t18 (c1 INT KEY, c4 BLOB, c5 CHAR(5),
 c6 INT DEFAULT '1',
 c7 TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP
 )ENGINE='NDB';
-RESET MASTER;
 
-*** Start Slave ***
-START SLAVE;
+*** Start Replica ***
+include/rpl/reset.inc
 
 *** Master Data Insert ***
 set @b1 = 'b1b1b1b1';
@@ -1728,8 +1675,7 @@ DROP TABLE t18;
 *****************************************************
 
 *** Create t5 on slave  ***
-STOP SLAVE;
-RESET SLAVE;
+STOP REPLICA;
 CREATE TABLE t5 (c1 INT PRIMARY KEY, c4 BLOB, c5 CHAR(5)
 ) ENGINE='NDB';
 
@@ -1738,10 +1684,9 @@ CREATE TABLE t5 (c1 INT KEY, c4 BLOB, c5 CHAR(5),
 c6 LONG, 
 c7 TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP
 )ENGINE='NDB';
-RESET MASTER;
 
-*** Start Slave ***
-START SLAVE;
+*** Start Replica ***
+include/rpl/reset.inc
 
 *** Master Data Insert ***
 set @b1 = 'b1b1b1b1';
@@ -1762,22 +1707,26 @@ c1	hex(c4)	c5
 3	6231623162316231	QA
 DROP TABLE t5;
 
-include/rpl_reset.inc
-SET NAMES utf8;
+include/rpl/reset.inc
+SET NAMES utf8mb3;
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
 SET SQL_LOG_BIN=0;
-CREATE TABLE t1 (c1 INT NOT NULL, c2 CHAR(255) CHARACTER SET UTF8 NOT NULL) ENGINE='NDB';
+CREATE TABLE t1 (c1 INT NOT NULL, c2 CHAR(255) CHARACTER SET utf8mb3 NOT NULL) ENGINE='NDB';
+Warnings:
+Warning	1287	'utf8mb3' is deprecated and will be removed in a future release. Please use utf8mb4 instead
 SET SQL_LOG_BIN=1;
 CREATE TABLE t1 (c1 INT) ENGINE='NDB';
-INSERT INTO t1 VALUES ();
-SET @text= REPEAT(_utf8'ç', 255);
+INSERT IGNORE INTO t1 VALUES ();
+SET @text= REPEAT(_utf8mb3'ç', 255);
 INSERT INTO t1 VALUES (1, @text);
-SELECT * FROM t1;
+SELECT * FROM t1 ORDER BY c1;
 c1	c2
-1	ççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççç
 0	
-SELECT * FROM t1;
+1	ççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççç
+SELECT * FROM t1 ORDER BY c1;
 c1
 0
 1
 DROP TABLE t1;
-include/rpl_end.inc
+include/rpl/deinit.inc

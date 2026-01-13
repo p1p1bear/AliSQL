@@ -1,36 +1,36 @@
-include/master-slave.inc
+include/rpl/init_source_replica.inc
 Warnings:
 Note	####	Sending passwords in plain text without SSL/TLS is extremely insecure.
-Note	####	Storing MySQL user name or password information in the master info repository is not secure and is therefore not recommended. Please consider using the USER and PASSWORD connection options for START SLAVE; see the 'START SLAVE Syntax' in the MySQL Manual for more information.
+Note	####	Storing MySQL user name or password information in the connection metadata repository is not secure and is therefore not recommended. Please consider using the USER and PASSWORD connection options for START REPLICA; see the 'START REPLICA Syntax' in the MySQL Manual for more information.
 [connection master]
-include/sync_slave_sql_with_master.inc
-stop slave;
-SET @@debug="d,simulate_find_log_pos_error";
-reset slave;
+include/rpl/sync_to_replica.inc
+STOP REPLICA;
+# Adding debug point 'simulate_find_log_pos_error' to @@GLOBAL.debug
+RESET REPLICA;
 ERROR HY000: Target log not found in binlog index
 show warnings;
 Level	Code	Message
 Error	1373	Target log not found in binlog index
 Error	1371	Failed purging old relay logs: Failed during log reset
-SET @@debug="";
-reset slave;
-change master to master_host='dummy';
-SET @@debug="d,simulate_find_log_pos_error";
-change master to master_host='dummy';
+# Removing debug point 'simulate_find_log_pos_error' from @@GLOBAL.debug
+RESET REPLICA;
+CHANGE REPLICATION SOURCE to SOURCE_HOST='dummy';
+# Adding debug point 'simulate_find_log_pos_error' to @@GLOBAL.debug
+CHANGE REPLICATION SOURCE to SOURCE_HOST='dummy';
 ERROR HY000: Target log not found in binlog index
-SET @@debug="";
-reset slave;
-change master to master_host='dummy';
-SET @@debug="d,simulate_find_log_pos_error";
-reset master;
+# Removing debug point 'simulate_find_log_pos_error' from @@GLOBAL.debug
+RESET REPLICA;
+CHANGE REPLICATION SOURCE to SOURCE_HOST='dummy';
+# Adding debug point 'simulate_find_log_pos_error' to @@GLOBAL.debug
+reset binary logs and gtids;
 ERROR HY000: Target log not found in binlog index
-SET @@debug="";
-reset master;
-SET @@debug="d,simulate_find_log_pos_error";
+# Removing debug point 'simulate_find_log_pos_error' from @@GLOBAL.debug
+reset binary logs and gtids;
+# Adding debug point 'simulate_find_log_pos_error' to @@GLOBAL.debug
 purge binary logs to 'master-bin.000001';
 ERROR HY000: Target log not found in binlog index
-SET @@debug="";
+# Removing debug point 'simulate_find_log_pos_error' from @@GLOBAL.debug
 purge binary logs to 'master-bin.000001';
 ==== clean up ====
-CHANGE MASTER TO MASTER_HOST = '127.0.0.1';
-include/rpl_end.inc
+CHANGE REPLICATION SOURCE TO SOURCE_HOST = '127.0.0.1';
+include/rpl/deinit.inc

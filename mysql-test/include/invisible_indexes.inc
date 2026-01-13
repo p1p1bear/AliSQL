@@ -1,6 +1,15 @@
+# To disable parts that are not supported by all engines, such as ndbcluster,
+# define corresponding variables as below.
+# Note they will be cleared before exit.
+# let $invisible_indexes_skip_fulltext=1;
+# let $invisible_indexes_skip_spatial=1;
+# let $invisible_indexes_skip_non_pk_autoincrement=1;
+
 --echo #
 --echo # WL#8697: Invisible Indexes
 --echo #
+
+SET SESSION information_schema_stats_expiry=0;
 
 --echo # Test of ALTER INDEX syntax.
 
@@ -27,19 +36,34 @@ CREATE TABLE t1 ( a INT, KEY (a) );
 CREATE TABLE t2 ( a INT, KEY (a) INVISIBLE );
 
 INSERT INTO t1 VALUES (1), (2), (3), (4), (5);
+INSERT INTO t1 SELECT * FROM t1;
+INSERT INTO t1 SELECT * FROM t1;
+INSERT INTO t1 SELECT * FROM t1;
+INSERT INTO t1 SELECT * FROM t1;
 INSERT INTO t2 SELECT * FROM t1;
 
 ANALYZE TABLE t1, t2;
 
-EXPLAIN SELECT a FROM t1;
-ALTER TABLE t1 ALTER INDEX a INVISIBLE;
-EXPLAIN SELECT a FROM t1;
-ALTER TABLE t1 ALTER INDEX a VISIBLE;
-EXPLAIN SELECT a FROM t1;
+--replace_regex $elide_costs
+--replace_column 10 X
+EXPLAIN SELECT a FROM t1 WHERE a > 3;
 
-EXPLAIN SELECT a FROM t2;
+ALTER TABLE t1 ALTER INDEX a INVISIBLE;
+--replace_regex $elide_costs
+EXPLAIN SELECT a FROM t1 WHERE a > 3;
+
+ALTER TABLE t1 ALTER INDEX a VISIBLE;
+--replace_regex $elide_costs
+--replace_column 10 X
+EXPLAIN SELECT a FROM t1 WHERE a > 3;
+
+--replace_regex $elide_costs
+EXPLAIN SELECT a FROM t2 WHERE a > 3;
+
 ALTER TABLE t2 ALTER INDEX a VISIBLE;
-EXPLAIN SELECT a FROM t2;
+--replace_regex $elide_costs
+--replace_column 10 X
+EXPLAIN SELECT a FROM t2 WHERE a > 3;
 
 DROP TABLE t1, t2;
 
@@ -52,10 +76,8 @@ CREATE TABLE t1 (
 
 SHOW INDEXES FROM t1;
 
-ALTER TABLE t1 DROP INDEX a;
-ALTER TABLE t1 ADD INDEX a1(a);
-ALTER TABLE t1 DROP INDEX b;
-ALTER TABLE t1 ADD INDEX b1(b) INVISIBLE;
+ALTER TABLE t1 RENAME INDEX a TO a1;
+ALTER TABLE t1 RENAME INDEX b TO b1;
 
 SHOW INDEXES FROM t1;
 
@@ -86,22 +108,9 @@ DROP TABLE t1;
 --error ER_PK_INDEX_CANT_BE_INVISIBLE
 CREATE TABLE t1 ( a INT, PRIMARY KEY (a) INVISIBLE );
 --error ER_PARSE_ERROR
-CREATE TABLE t1 ( a INT PRIMARY KEY INVISIBLE );
---error ER_PARSE_ERROR
-CREATE TABLE t1 ( a INT KEY INVISIBLE );
---error ER_PARSE_ERROR
 ALTER TABLE t1 ALTER INDEX PRIMARY INVISIBLE;
-CREATE TABLE t1 (
-  a INT,
-  b INT,
-  c INT,
-  INDEX (b) INVISIBLE,
-  INDEX (c)
-);
 --error ER_PK_INDEX_CANT_BE_INVISIBLE
 ALTER TABLE t1 ADD PRIMARY KEY (a) INVISIBLE;
-SHOW CREATE TABLE t1;
-DROP TABLE t1;
 
 --echo #
 --echo # Currently we allow to name the primary key index, but the name is
@@ -124,6 +133,8 @@ CREATE TABLE t1 (
 );
 
 --error ER_KEY_DOES_NOT_EXITS
+ALTER TABLE t1 RENAME INDEX no_such_index TO x;
+--error ER_KEY_DOES_NOT_EXITS
 ALTER TABLE t1 ALTER INDEX no_such_index INVISIBLE;
 
 --echo #
@@ -136,14 +147,14 @@ SHOW INDEXES FROM t1;
 --echo #
 --echo # Various combinations of RENAME INDEX and ALTER INDEX ... INVISIBLE.
 --echo #
-# --error ER_KEY_DOES_NOT_EXITS
-# ALTER TABLE t1 RENAME INDEX a TO x, RENAME INDEX x TO a;
-# --error ER_KEY_DOES_NOT_EXITS
-# ALTER TABLE t1 RENAME INDEX a TO x, ALTER INDEX x INVISIBLE;
-# --error ER_KEY_DOES_NOT_EXITS
-# ALTER TABLE t1 RENAME INDEX a TO x, ALTER INDEX a VISIBLE;
-# --error ER_KEY_DOES_NOT_EXITS
-# ALTER TABLE t1 ALTER INDEX a VISIBLE, RENAME INDEX a TO x;
+--error ER_KEY_DOES_NOT_EXITS
+ALTER TABLE t1 RENAME INDEX a TO x, RENAME INDEX x TO a;
+--error ER_KEY_DOES_NOT_EXITS
+ALTER TABLE t1 RENAME INDEX a TO x, ALTER INDEX x INVISIBLE;
+--error ER_KEY_DOES_NOT_EXITS
+ALTER TABLE t1 RENAME INDEX a TO x, ALTER INDEX a VISIBLE;
+--error ER_KEY_DOES_NOT_EXITS
+ALTER TABLE t1 ALTER INDEX a VISIBLE, RENAME INDEX a TO x;
 
 
 --echo #
@@ -163,6 +174,7 @@ ALTER TABLE t1 ALTER INDEX a VISIBLE, ALGORITHM = INPLACE;
 --disable_info
 ANALYZE TABLE t1;
 SHOW INDEXES FROM t1;
+
 
 --enable_info
 ALTER TABLE t1 ALTER INDEX a INVISIBLE, ALGORITHM = DEFAULT;
@@ -227,6 +239,7 @@ DROP TABLE t1, t2, t3, t4, t5;
 CREATE TABLE t1 ( a INT NOT NULL, UNIQUE KEY (a) );
 --error ER_PK_INDEX_CANT_BE_INVISIBLE
 ALTER TABLE t1 ALTER INDEX a INVISIBLE;
+--replace_regex $elide_costs
 EXPLAIN
 SELECT * FROM t1;
 SELECT * FROM t1;
@@ -266,18 +279,21 @@ DROP TABLE t1, t2;
 
 CREATE TEMPORARY TABLE t1 ( a INT, KEY (a) INVISIBLE );
 SHOW INDEXES FROM t1;
+--replace_regex $elide_costs
 EXPLAIN SELECT a FROM t1;
 DROP TABLE t1;
 
 
+if (!$invisible_indexes_skip_spatial)
+{
 --echo #
 --echo # Invisible spatial indexes.
 --echo #
 CREATE TABLE t1 (
   fid INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-  g GEOMETRY NOT NULL,
+  g GEOMETRY NOT NULL SRID 0,
   SPATIAL KEY(g)
-) ENGINE=MyISAM;
+);
 
 ANALYZE TABLE t1;
 
@@ -300,55 +316,109 @@ WHERE ST_Within(g,
 
 --echo # There appears to be a bug causing the cardinality number to fluctuate
 --echo # for spatial indexes.
+--replace_regex $elide_costs
 --replace_column 10 X
 --eval $query
 ALTER TABLE t1 ALTER INDEX g INVISIBLE;
 --replace_column 7 X
 SHOW INDEXES FROM t1;
+--replace_regex $elide_costs
 --replace_column 10 X
 --eval $query
 
 DROP TABLE t1;
+}
 
+if ($invisible_indexes_skip_spatial)
+{
+let $is_ndbcluster=
+SELECT 1
+FROM information_schema.tables
+WHERE table_schema = 'test' AND table_name = 't1' AND engine = 'ndbcluster';
 
+if ($is_ndbcluster)
+{
+--error ER_TABLE_CANT_HANDLE_SPKEYS
+CREATE TABLE t1 (
+  fid INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  g GEOMETRY NOT NULL SRID 0,
+  SPATIAL KEY(g)
+);
+}
+}
+
+if (!$invisible_indexes_skip_spatial)
+{
 --echo #
 --echo # Test of invisible fulltext indexes.
 --echo #
-CREATE TABLE t1 (a VARCHAR(200), b TEXT, FULLTEXT (a,b)) ENGINE=MyISAM;
-INSERT INTO t1 VALUES('Some data', 'for full-text search');
+CREATE TABLE t1 (a VARCHAR(200), b TEXT, FULLTEXT (a,b));
+INSERT INTO t1 VALUES('Thirty-two thousand', 'seven hundred and sixty-seven');
+INSERT INTO t1 VALUES('Thirty-two thousand', 'seven hundred and sixty-eight');
+INSERT INTO t1 VALUES('Thirty-two thousand', 'seven hundred and sixty-nine');
+INSERT INTO t1 VALUES('Thirty-two thousand', 'seven hundred and seventy');
+INSERT INTO t1 VALUES('Thirty-two thousand', 'seven hundred and seventy-one');
+INSERT INTO t1 VALUES('Thirty-two thousand', 'seven hundred and seventy-two');
+INSERT INTO t1 SELECT * FROM t1;
+INSERT INTO t1 SELECT * FROM t1;
+INSERT INTO t1 SELECT * FROM t1;
+INSERT INTO t1 SELECT * FROM t1;
 ANALYZE TABLE t1;
 
-let $query1= SELECT * FROM t1 WHERE MATCH(a, b) AGAINST ("collections");
+let $query1= SELECT * FROM t1 WHERE MATCH(a, b) AGAINST ("sixty");
 let $query2=
-SELECT * FROM t1 WHERE MATCH(a, b) AGAINST ("collections" IN BOOLEAN MODE);
+SELECT * FROM t1 WHERE MATCH(a, b) AGAINST ("sixty" IN BOOLEAN MODE);
 
+--replace_regex $elide_costs
 --eval EXPLAIN $query1
+--replace_regex $elide_costs
 --eval EXPLAIN $query2
 ALTER TABLE t1 ALTER INDEX a INVISIBLE;
 SHOW INDEXES FROM t1;
+--replace_regex $elide_costs
 --disable_abort_on_error
 --eval EXPLAIN $query1
+--replace_regex $elide_costs
 --eval EXPLAIN $query2
 --eval $query1
 --eval $query2
 --enable_abort_on_error
 
 DROP TABLE t1;
+}
 
 
+if (!$invisible_indexes_skip_non_pk_autoincrement)
+{
 --echo #
 --echo # Invisible indexes on AUTO_INCREMENT columns.
 --echo #
 CREATE TABLE t1 ( a INT AUTO_INCREMENT, KEY ( a ) );
 INSERT INTO t1 VALUES (), (), ();
+INSERT INTO t1 SELECT * FROM t1;
+INSERT INTO t1 SELECT * FROM t1;
+INSERT INTO t1 SELECT * FROM t1;
 ANALYZE TABLE t1;
 
-EXPLAIN SELECT a FROM t1;
+--replace_regex $elide_costs
+EXPLAIN SELECT a FROM t1 WHERE a > 4;
 ALTER TABLE t1 ALTER INDEX a INVISIBLE;
 SHOW INDEXES FROM t1;
-EXPLAIN SELECT a FROM t1;
+--replace_regex $elide_costs
+EXPLAIN SELECT a FROM t1 WHERE a > 4;
 
 DROP TABLE t1;
+}
+
+if ($invisible_indexes_skip_non_pk_autoincrement)
+{
+--let $ndbcluster_is_default=SELECT @@default_storage_engine = 'ndbcluster';
+if ($ndbcluster_is_default)
+{
+--error ER_CANT_CREATE_TABLE
+CREATE TABLE t1 ( a INT AUTO_INCREMENT, KEY ( a ) );
+}
+}
 
 --echo #
 --echo # Bug#24660093: REMOVING AN INVISIBLE INDEX BREAKS EXPLAIN
@@ -395,3 +465,7 @@ SELECT * FROM t1 IGNORE INDEX FOR GROUP BY (a);
 
 
 DROP TABLE t1;
+
+let $invisible_indexes_skip_fulltext=;
+let $invisible_indexes_skip_spatial=;
+let $invisible_indexes_skip_non_pk_autoincrement=;

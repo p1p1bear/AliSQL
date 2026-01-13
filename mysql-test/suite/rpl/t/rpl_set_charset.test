@@ -1,4 +1,5 @@
-source include/master-slave.inc;
+--source include/not_group_replication_plugin.inc
+source include/rpl/init_source_replica.inc;
 --disable_warnings
 drop database if exists mysqltest1;
 # 4.1 bases its conversion on the db's charset,
@@ -10,6 +11,7 @@ drop table if exists t1;
 --enable_warnings
 create table t1 (a varchar(255) character set latin2, b varchar(4));
 SET CHARACTER SET cp1250_latin2;
+--character_set latin2
 INSERT INTO t1 VALUES ('ŠŒ','80');
 INSERT INTO t1 VALUES ('šœŸ','90');
 INSERT INTO t1 VALUES ('£¥ª¯','A0');
@@ -18,15 +20,16 @@ INSERT INTO t1 VALUES ('ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏ','C0');
 INSERT INTO t1 VALUES ('ĞÑÒÓÔÕÖ×ØÙÚÛÜİŞß','D0');
 INSERT INTO t1 VALUES ('àáâãäåæçèéêëìíîï','E0');
 INSERT INTO t1 VALUES ('ğñòóôõö÷øùúûüışÿ','F0');
+--character_set utf8mb4
 select "--- on master ---";
 select hex(a),b from t1 order by b;
---source include/sync_slave_sql_with_master.inc
+--source include/rpl/sync_to_replica.inc
 use mysqltest1;
 select "--- on slave ---";
 select hex(a),b from t1 order by b;
 connection master;
 drop database mysqltest1;
---source include/sync_slave_sql_with_master.inc
+--source include/rpl/sync_to_replica.inc
 
 # End of 4.1 tests
---source include/rpl_end.inc
+--source include/rpl/deinit.inc

@@ -5,25 +5,23 @@
 --echo # State before crash
 --replace_result #p# #P# #sp# #SP#
 --list_files $DATADIR/test
-SHOW CREATE TABLE t1;
+SHOW CREATE TABLE `t1/a\b#2`;
 --sorted_result
-SELECT * FROM t1;
+SELECT * FROM `t1/a\b#2`;
 --exec echo "wait" > $MYSQLTEST_VARDIR/tmp/mysqld.1.expect
---disable_reconnect
 # CR_SERVER_LOST
 --error 2013
 --eval $crash_statement
 --echo # State after crash (before recovery)
---replace_regex /sqlx.*\./sqlx-nnnn_nnnn./ /#p#/#P#/ /#sp#/#SP#/ /#tmp#/#TMP#/
+--replace_regex /sql.*\./sql-tmp./ /#p#/#P#/ /#sp#/#SP#/ /#tmp#/#TMP#/
 --list_files $DATADIR/test
 --exec echo "restart" > $MYSQLTEST_VARDIR/tmp/mysqld.1.expect
---enable_reconnect
 let $WAIT_COUNT=6000;
 --source include/wait_time_until_connected_again.inc
 --echo # State after crash recovery
 --replace_result #p# #P# #sp# #SP#
 --list_files $DATADIR/test
-SHOW CREATE TABLE t1;
+SHOW CREATE TABLE `t1/a\b#2`;
 --sorted_result
-SELECT * FROM t1;
-DROP TABLE t1;
+SELECT * FROM `t1/a\b#2`;
+DROP TABLE `t1/a\b#2`;

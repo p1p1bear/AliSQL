@@ -25,10 +25,10 @@
 #   In step iv), before the bug was fixed, the test case would fail
 #   with mysqlbinlog reporting that it was unable to succeed in
 #   reading the event.
-
--- source include/master-slave.inc
--- source include/have_innodb.inc
+-- source include/not_group_replication_plugin.inc
 -- source include/have_binlog_format_row.inc
+-- source include/rpl/init_source_replica.inc
+
 
 -- disable_warnings
 DROP TABLE IF EXISTS `t1`;
@@ -185,7 +185,7 @@ CREATE TABLE `t1` (
   `c145` varchar(30) DEFAULT NULL,
   `c146` varchar(30) DEFAULT NULL,
   PRIMARY KEY (`c1`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB CHARACTER SET latin1;
 
 -- enable_warnings
 
@@ -193,7 +193,7 @@ LOCK TABLES `t1` WRITE;
 INSERT INTO `t1`(c2) VALUES ('1');
 FLUSH LOGS;
 
---source include/sync_slave_sql_with_master.inc
+--source include/rpl/sync_to_replica.inc
 -- connection master
 
 -- echo ### assertion: the slave replicated event successfully and tables match
@@ -202,7 +202,7 @@ FLUSH LOGS;
 
 -- connection master
 DROP TABLE `t1`;
---source include/sync_slave_sql_with_master.inc
+--source include/rpl/sync_to_replica.inc
 -- connection master
 
 -- echo === Using mysqlbinlog to detect failure. Before the patch mysqlbinlog would find a corrupted event, thence would fail.
@@ -231,7 +231,7 @@ DROP TABLE `t1`;
 # in both cases: when slave is replaying events and when
 # mysqlbinlog is used to read the binary log
 
---source include/rpl_reset.inc
+--source include/rpl/reset.inc
 -- connection master
 
 # Create several tables with field_metadata_size ranging
@@ -282,7 +282,7 @@ for my $i (1..$ntables)
     }
   }
 
-  print FILE ") Engine=InnoDB;\n";
+  print FILE ") Engine=InnoDB CHARACTER SET latin1;\n";
 
   $tables.= " t$i WRITE";
   if ($i < $ntables)
@@ -314,7 +314,7 @@ EOF
 -- enable_query_log
 -- enable_warnings
 
---source include/sync_slave_sql_with_master.inc
+--source include/rpl/sync_to_replica.inc
 -- connection master
 
 FLUSH LOGS;
@@ -330,7 +330,7 @@ while($ntables)
   -- disable_query_log
   -- eval DROP TABLE t$ntables
   -- enable_query_log
-  --source include/sync_slave_sql_with_master.inc
+  --source include/rpl/sync_to_replica.inc
   -- connection master
 
   -- dec $ntables
@@ -340,10 +340,10 @@ while($ntables)
 -- echo ###            detect failure. Before the patch mysqlbinlog would find 
 -- echo ###            a corrupted event, thence would fail.
 -- let $MYSQLD_DATADIR= `SELECT @@datadir`
--- exec $MYSQL_BINLOG -v --hex $MYSQLD_DATADIR/master-bin.000001 > $MYSQLTEST_VARDIR/tmp/mysqlbinlog_bug50018.binlog
+-- exec $MYSQL_BINLOG -v --hexdump $MYSQLD_DATADIR/master-bin.000001 > $MYSQLTEST_VARDIR/tmp/mysqlbinlog_bug50018.binlog
 
 ## clean up
 ## For debugging purposes you might want not to remove these
 -- remove_file $MYSQLTEST_VARDIR/tmp/mysqlbinlog_bug50018.binlog
 -- remove_file $generated_sql
---source include/rpl_end.inc
+--source include/rpl/deinit.inc

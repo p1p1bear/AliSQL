@@ -1,4 +1,5 @@
-source include/master-slave.inc;
+--source include/not_group_replication_plugin.inc
+source include/rpl/init_source_replica.inc;
 
 CALL mtr.add_suppression("Unsafe statement written to the binary log using statement format since BINLOG_FORMAT = STATEMENT");
 
@@ -22,7 +23,7 @@ while ($1)
   dec $1;
 }
 enable_query_log;
---source include/sync_slave_sql_with_master.inc
+--source include/rpl/sync_to_replica.inc
 select get_lock("lock",3);
 select * from t1;
 # There is no point in testing REPLICATIION of the IS_*_LOCK
@@ -33,15 +34,14 @@ select * from t1;
 # or that the is_free_lock() we're playing returned 0 etc.
 # But here all we do is test these functions outside of replication.
 select is_free_lock("lock"), is_used_lock("lock") = connection_id();
-explain extended select is_free_lock("lock"), is_used_lock("lock");
+explain select is_free_lock("lock"), is_used_lock("lock");
 # Check lock functions
 select is_free_lock("lock2");
-select is_free_lock(NULL);
 connection master1;
 drop table t1;
---source include/sync_slave_sql_with_master.inc
+--source include/rpl/sync_to_replica.inc
 
 
---source include/rpl_end.inc
+--source include/rpl/deinit.inc
 
 # End of 4.1 tests

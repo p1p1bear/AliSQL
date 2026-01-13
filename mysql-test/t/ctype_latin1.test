@@ -1,3 +1,7 @@
+--source include/no_valgrind_without_big.inc
+
+# The include file ctype_numconv.inc have some MyISAM specific tests
+
 #
 # Tests with the latin1 character set
 #
@@ -10,6 +14,7 @@ drop table if exists t1;
 #
 
 SET NAMES latin1;
+--character_set latin1
 CREATE TABLE t1 (a char(1) character set latin1);
 INSERT INTO t1 VALUES (0x00),(0x01),(0x02),(0x03),(0x04),(0x05),(0x06),(0x07);
 INSERT INTO t1 VALUES (0x08),(0x09),(0x0A),(0x0B),(0x0C),(0x0D),(0x0E),(0x0F);
@@ -49,7 +54,7 @@ INSERT INTO t1 VALUES (0xF8),(0xF9),(0xFA),(0xFB),(0xFC),(0xFD),(0xFE),(0xFF);
 #
 SELECT 
   hex(a), 
-  hex(@u:=convert(a using utf8)),
+  hex(@u:=convert(a using utf8mb3)),
   hex(@l:=convert(@u using latin1)),
   a=@l FROM t1;
 DROP TABLE t1;
@@ -98,16 +103,16 @@ SELECT 'Ña' as str;
 
 #
 # Bug#18321: Can't store EuroSign with latin1_german1_ci and latin1_general_ci
-# The problem was in latin1->utf8->latin1 round trip.
+# The problem was in latin1->utf8mb3->latin1 round trip.
 #
 set @str= _latin1 'ABC Ä∞ßﬂ≤≥µ~ ‰ˆ¸ƒ÷‹ ·ÈÌÛ˙ ¿»Ã“Ÿ @ abc';
-SELECT convert(@str collate latin1_bin using utf8);
-SELECT convert(@str collate latin1_general_ci using utf8);
-SELECT convert(@str collate latin1_german1_ci using utf8);
-SELECT convert(@str collate latin1_danish_ci using utf8);
-SELECT convert(@str collate latin1_spanish_ci using utf8);
-SELECT convert(@str collate latin1_german2_ci using utf8);
-SELECT convert(@str collate latin1_swedish_ci using utf8);
+SELECT convert(@str collate latin1_bin using utf8mb3);
+SELECT convert(@str collate latin1_general_ci using utf8mb3);
+SELECT convert(@str collate latin1_german1_ci using utf8mb3);
+SELECT convert(@str collate latin1_danish_ci using utf8mb3);
+SELECT convert(@str collate latin1_spanish_ci using utf8mb3);
+SELECT convert(@str collate latin1_german2_ci using utf8mb3);
+SELECT convert(@str collate latin1_swedish_ci using utf8mb3);
 
 # End of 4.1 tests
 
@@ -135,35 +140,6 @@ SELECT '' LIKE '' ESCAPE EXPORT_SET(1, 1, 1, 1, '');
 
 --echo End of 5.1 tests
 
-                                                                               
---echo #
---echo # Start of 5.5 tests
---echo #
-
---source include/ctype_numconv.inc
-
---echo #
---echo # Bug#11764503 (Bug#57341) Query in EXPLAIN EXTENDED shows wrong characters
---echo #
-# Test latin1 client erroneously started with --default-character-set=utf8
-# EXPLAIN output should still be pretty readable.
-# We're using '√≥' (\xC3\xB3) as a magic sequence:
-# - it's "LATIN CAPITAL LETTER A WITH TILDE ABOVE + SUPERSCRIPT 3" in latin1
-# - it's "LATIN SMALL LETTER O WITH ACUTE ABOVE" in utf8.
-SET NAMES utf8;
-EXPLAIN EXTENDED SELECT 'abcd√≥', _latin1'abcd√≥', _utf8'abcd√≥';
-# Test normal latin1
-SET NAMES latin1;
-EXPLAIN EXTENDED SELECT 'abcd√≥', _latin1'abcd√≥', _utf8'abcd√≥';
-
-
---echo #
---echo # End of 5.5 tests
---echo #
-
-
-
---echo #
 --echo # Start of 5.6 tests
 --echo #
 
@@ -174,22 +150,18 @@ EXPLAIN EXTENDED SELECT 'abcd√≥', _latin1'abcd√≥', _utf8'abcd√≥';
 set @@collation_connection=latin1_swedish_ci;
 --source include/weight_string.inc
 --source include/weight_string_euro.inc
---source include/weight_string_l1.inc
 
 set @@collation_connection=latin1_bin;
 --source include/weight_string.inc
 --source include/weight_string_euro.inc
---source include/weight_string_l1.inc
 
 set @@collation_connection=latin1_general_cs;
 --source include/weight_string.inc
 --source include/weight_string_euro.inc
---source include/weight_string_l1.inc
 
 set @@collation_connection=binary;
 --source include/weight_string.inc
 --source include/weight_string_euro.inc
---source include/weight_string_l1.inc
 
 set names latin1;
 

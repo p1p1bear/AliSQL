@@ -6,9 +6,9 @@
 #======================================================================
 # WL#4084: enable disabled parts. 2007-11-15, hhunger
 
-# This test cannot be used for the embedded server because we check here
-# privilgeges.
---source include/not_embedded.inc
+
+set @orig_sql_mode_session= @@SESSION.sql_mode;
+set @orig_sql_mode_global= @@GLOBAL.sql_mode;
 
 USE test;
 --source suite/funcs_1/include/tb3.inc
@@ -35,10 +35,10 @@ let $message= Testcase 3.5.3:;
 	eval create table t1 (f1 char(20)) engine= $engine_type;
 
 	create User test_noprivs@localhost;
-	set password for test_noprivs@localhost = password('PWD');
+	set password for test_noprivs@localhost = 'PWD';
 
 	create User test_yesprivs@localhost;
-	set password for test_yesprivs@localhost = password('PWD');
+	set password for test_yesprivs@localhost = 'PWD';
 
 #Section 3.5.3.1 / 3.5.3.2
 # Test case: Ensure TRIGGER privilege is required to create a trigger
@@ -54,7 +54,8 @@ let $message= Testcase 3.5.3.2/6:;
 	revoke ALL PRIVILEGES, GRANT OPTION FROM test_noprivs@localhost;
 	grant ALL  on *.* to test_noprivs@localhost;
 	revoke TRIGGER on *.* from test_noprivs@localhost;
-	show grants for test_noprivs@localhost;
+	--let $user = test_noprivs@localhost
+	--source include/show_grants.inc
 
 	revoke ALL PRIVILEGES, GRANT OPTION FROM test_yesprivs@localhost;
 	grant TRIGGER on *.* to test_yesprivs@localhost;
@@ -147,8 +148,8 @@ let $message=Testcase 3.5.3.7a:;
 	revoke ALL PRIVILEGES, GRANT OPTION FROM test_noprivs@localhost;
 	grant ALL  on *.* to test_noprivs@localhost;
 	revoke UPDATE  on *.* from test_noprivs@localhost;
-	show grants for test_noprivs@localhost;
-
+	--let $user = test_noprivs@localhost
+	--source include/show_grants.inc
 	revoke ALL PRIVILEGES, GRANT OPTION FROM test_yesprivs@localhost;
 	grant TRIGGER, UPDATE on *.* to test_yesprivs@localhost;
 	show grants for test_yesprivs@localhost;
@@ -159,7 +160,8 @@ let $message=Testcase 3.5.3.7a:;
 	connection no_privs_424a;
 	select current_user;
 	use priv_db;
-	show grants;
+	--let $user = 0
+	--source include/show_grants.inc
 	select f1 from t1 order by f1;
 
 	create trigger trg4a_1 before INSERT on t1 for each row
@@ -353,7 +355,8 @@ let $message= Testcase 3.5.3.8a:;
 	revoke ALL PRIVILEGES, GRANT OPTION FROM test_noprivs@localhost;
 	grant ALL  on *.* to test_noprivs@localhost;
 	revoke SELECT  on *.* from test_noprivs@localhost;
-	show grants for test_noprivs@localhost;
+	--let $user = test_noprivs@localhost
+	--source include/show_grants.inc
 
 	revoke ALL PRIVILEGES, GRANT OPTION FROM test_yesprivs@localhost;
 	grant TRIGGER, SELECT on *.* to test_yesprivs@localhost;
@@ -366,7 +369,8 @@ let $message= Testcase 3.5.3.8a:;
 	connection no_privs_425a;
 	select current_user;
 	use priv_db;
-	show grants;
+	--let $user = 0
+	--source include/show_grants.inc
 
 	create trigger trg5a_1 before INSERT on t1 for each row
 		set @test_var = new.f1;
@@ -653,3 +657,6 @@ let $message=Testcase: 3.5.3.x:;
 
 use test;
 drop table tb3;
+
+set GLOBAL sql_mode= @orig_sql_mode_global;
+set SESSION sql_mode= @orig_sql_mode_session;

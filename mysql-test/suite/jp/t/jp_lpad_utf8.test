@@ -1,5 +1,3 @@
---source include/have_utf8.inc
---source include/have_innodb.inc
 --disable_warnings
 drop table if exists `Ｔ１`;
 drop table if exists `Ｔ２`;
@@ -13,21 +11,21 @@ drop table if exists `Ｔ９`;
 --enable_warnings
 
 #
-# Test LPAD() function with Japanese character in utf8 encoding
+# Test LPAD() function with Japanese character in utf8mb3 encoding
 #
 
-SET NAMES utf8;
-SET character_set_database = utf8;
+SET NAMES utf8mb3;
+SET character_set_database = utf8mb3;
 
-CREATE TABLE `Ｔ１` (`Ｃ１` char(5), INDEX(`Ｃ１`)) DEFAULT CHARSET = utf8 engine = innodb;
-CREATE TABLE `Ｔ２` (`Ｃ１` char(5), INDEX(`Ｃ１`)) DEFAULT CHARSET = utf8 engine = innodb;
-CREATE TABLE `Ｔ３` (`Ｃ１` char(5), INDEX(`Ｃ１`)) DEFAULT CHARSET = utf8 engine = innodb;
-CREATE TABLE `Ｔ４` (`Ｃ１` char(5), INDEX(`Ｃ１`)) DEFAULT CHARSET = utf8 engine = myisam;
-CREATE TABLE `Ｔ５` (`Ｃ１` char(5), INDEX(`Ｃ１`)) DEFAULT CHARSET = utf8 engine = myisam;
-CREATE TABLE `Ｔ６` (`Ｃ１` char(5), INDEX(`Ｃ１`)) DEFAULT CHARSET = utf8 engine = myisam;
-CREATE TABLE `Ｔ７` (`Ｃ１` char(5), INDEX(`Ｃ１`)) DEFAULT CHARSET = utf8 engine = MEMORY;
-CREATE TABLE `Ｔ８` (`Ｃ１` char(5), INDEX(`Ｃ１`)) DEFAULT CHARSET = utf8 engine = MEMORY;
-CREATE TABLE `Ｔ９` (`Ｃ１` char(5), INDEX(`Ｃ１`)) DEFAULT CHARSET = utf8 engine = MEMORY;
+CREATE TABLE `Ｔ１` (`Ｃ１` char(5), INDEX(`Ｃ１`)) DEFAULT CHARSET = utf8mb3 engine = innodb;
+CREATE TABLE `Ｔ２` (`Ｃ１` char(5), INDEX(`Ｃ１`)) DEFAULT CHARSET = utf8mb3 engine = innodb;
+CREATE TABLE `Ｔ３` (`Ｃ１` char(5), INDEX(`Ｃ１`)) DEFAULT CHARSET = utf8mb3 engine = innodb;
+CREATE TABLE `Ｔ４` (`Ｃ１` char(5), INDEX(`Ｃ１`)) DEFAULT CHARSET = utf8mb3 engine = myisam;
+CREATE TABLE `Ｔ５` (`Ｃ１` char(5), INDEX(`Ｃ１`)) DEFAULT CHARSET = utf8mb3 engine = myisam;
+CREATE TABLE `Ｔ６` (`Ｃ１` char(5), INDEX(`Ｃ１`)) DEFAULT CHARSET = utf8mb3 engine = myisam;
+CREATE TABLE `Ｔ７` (`Ｃ１` char(5), INDEX(`Ｃ１`)) DEFAULT CHARSET = utf8mb3 engine = MEMORY;
+CREATE TABLE `Ｔ８` (`Ｃ１` char(5), INDEX(`Ｃ１`)) DEFAULT CHARSET = utf8mb3 engine = MEMORY;
+CREATE TABLE `Ｔ９` (`Ｃ１` char(5), INDEX(`Ｃ１`)) DEFAULT CHARSET = utf8mb3 engine = MEMORY;
 
 INSERT INTO `Ｔ１` VALUES ('ｱｲｳｴｵ'),('ｱｲｳｴ'),('ｱｲｳ'),('ｱｲ'),('ｱ'),('');
 INSERT INTO `Ｔ２` VALUES ('あいうえお'),('あいうえ'),('あいう'),('あい'),('あ'),('');
@@ -40,18 +38,27 @@ INSERT INTO `Ｔ８` VALUES ('あいうえお'),('あいうえ'),('あいう'),(
 INSERT INTO `Ｔ９` VALUES ('龔龖龗龞龡'),('龔龖龗龞'),('龔龖龗'),('龔龖'),('龔'),('');
 
 #InnoDB
+--sorted_result
 SELECT `Ｃ１`, LPAD(`Ｃ１`,5,'｡') FROM `Ｔ１`;
+--sorted_result
 SELECT `Ｃ１`, LPAD(`Ｃ１`,5,'Ｘ') FROM `Ｔ２`;
+--sorted_result
 SELECT `Ｃ１`, LPAD(`Ｃ１`,5,'丄') FROM `Ｔ３`;
 
 #MyISAM
+--sorted_result
 SELECT `Ｃ１`, LPAD(`Ｃ１`,5,'｡') FROM `Ｔ４`;
+--sorted_result
 SELECT `Ｃ１`, LPAD(`Ｃ１`,5,'Ｘ') FROM `Ｔ５`;
+--sorted_result
 SELECT `Ｃ１`, LPAD(`Ｃ１`,5,'丄' ) FROM `Ｔ６`;
 
 #MEMORY
+--sorted_result
 SELECT `Ｃ１`, LPAD(`Ｃ１`,5,'｡') FROM `Ｔ７`;
+--sorted_result
 SELECT `Ｃ１`, LPAD(`Ｃ１`,5,'Ｘ') FROM `Ｔ８`;
+--sorted_result
 SELECT `Ｃ１`, LPAD(`Ｃ１`,5,'丄' ) FROM `Ｔ９`;
 
 DROP TABLE `Ｔ１`;

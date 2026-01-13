@@ -22,15 +22,6 @@
 #  server-system-variables.html                                               #
 #                                                                             #
 ###############################################################################
---source include/have_big5.inc
---source include/have_ujis.inc
---source include/have_sjis.inc
---source include/have_utf8.inc
---source include/have_ucs2.inc
---source include/have_utf8mb4.inc
---source include/have_utf16.inc
---source include/have_utf32.inc
-
 --source include/load_sysvars.inc
 ###################################################
 ##       START OF character_set_database TESTS   ##
@@ -59,18 +50,18 @@ SELECT @session_start_value;
 --error ER_BAD_FIELD_ERROR
 SELECT character_set_database;
 # assign value without @@
-SET character_set_database=utf8;
+SET character_set_database=utf8mb3;
 SELECT @@session.character_set_database;
 # assign global variable without @@
 --Error ER_PARSE_ERROR
-SET global.character_set_database=utf8;
+SET global.character_set_database=utf8mb3;
 # using another syntax for accessing session variable
-SET session character_set_database=utf8;
+SET session character_set_database=utf8mb3;
 # accessing variable with scope the wrong way
 --Error ER_BAD_FIELD_ERROR
 SELECT session character_set_database;
 # using another syntax for accessing dynamic variable
-SET global character_set_database=utf8;
+SET global character_set_database=utf8mb3;
 --Error ER_BAD_FIELD_ERROR
 SELECT global character_set_database;
 
@@ -90,7 +81,7 @@ SELECT @@global.character_set_database;
 ##############################################################################
 #     see if setting global value changes session value and vice versa       #
 ##############################################################################
-SET @@session.character_set_database = utf8;
+SET @@session.character_set_database = utf8mb3;
 SELECT @@session.character_set_database;
 SET @@global.character_set_database = latin2;
 SELECT @@global.character_set_database;
@@ -116,7 +107,7 @@ SELECT @@character_set_database = @@local.character_set_database AS res;
 #     Check if combining character set works                              #
 ###########################################################################
 --Error ER_BAD_FIELD_ERROR
-SET @@character_set_database = utf8 + latin2;
+SET @@character_set_database = utf8mb3 + latin2;
 
 --echo '#--------------------FN_DYNVARS_012_06-------------------------#'
 #############################################################################
@@ -141,12 +132,12 @@ let charset_variable = @@global.character_set_database;
 # Change the value of character_set_database to a valid value with uppercase,#
 # lowercase and mixedcase                                                    #
 ##############################################################################
-SET @@character_set_database = UTF8;
+SET @@character_set_database = utf8mb3;
 SELECT @@character_set_database;
-SET @@character_set_database = utf8;
+SET @@character_set_database = utf8mb3;
 SELECT @@character_set_database;
 
-SET @@global.character_set_database = uTf8;
+SET @@global.character_set_database = utf8mb3;
 SELECT @@global.character_set_database;
 
 --echo '#--------------------FN_DYNVARS_012_09-------------------------#'
@@ -209,6 +200,10 @@ SELECT @@character_set_database AS res_with_true;
 
 --Error ER_UNKNOWN_CHARACTER_SET
 SET @@character_set_database = ON;
+--Error ER_UNKNOWN_CHARACTER_SET
+SET @@character_set_database = repeat('e', 256);
+--Error ER_UNKNOWN_CHARACTER_SET
+SET @@character_set_database = repeat('e', 1024);
 
 --echo '#--------------------FN_DYNVARS_012_11-------------------------#'
 ###############################################################################
@@ -233,33 +228,43 @@ SET @@global.character_set_database = true;
 
 --Error ER_UNKNOWN_CHARACTER_SET
 SET @@global.character_set_database = ON;
+--Error ER_UNKNOWN_CHARACTER_SET
+SET @@global.character_set_database = repeat('e', 256);
+--Error ER_UNKNOWN_CHARACTER_SET
+SET @@global.character_set_database = repeat('e', 1024);
 
 --echo '#--------------------FN_DYNVARS_012_12-------------------------#'
 ############################################################################
 #     Check if the value in GLOBAL Table matches value in variable         #
 ############################################################################
+--disable_warnings
 SELECT @@global.character_set_database =
- (SELECT VARIABLE_VALUE FROM INFORMATION_SCHEMA.GLOBAL_VARIABLES
+ (SELECT VARIABLE_VALUE FROM performance_schema.global_variables
   WHERE VARIABLE_NAME='character_set_database') AS res;
+--enable_warnings
 SET @@global.character_set_database = 1;
 SELECT @@global.character_set_database;
+--disable_warnings
 SELECT @@global.character_set_database =
- (SELECT VARIABLE_VALUE FROM INFORMATION_SCHEMA.GLOBAL_VARIABLES
+ (SELECT VARIABLE_VALUE FROM performance_schema.global_variables
   WHERE VARIABLE_NAME='character_set_database') AS res;
+--enable_warnings
 
 --echo '#--------------------FN_DYNVARS_012_13-------------------------#'
 ##############################################################################
 #     Check if the value in SESSION Table matches value in variable          #
 ##############################################################################
+--disable_warnings
 SELECT @@character_set_database =
- (SELECT VARIABLE_VALUE FROM INFORMATION_SCHEMA.SESSION_VARIABLES
+ (SELECT VARIABLE_VALUE FROM performance_schema.session_variables
   WHERE VARIABLE_NAME='character_set_database') AS res;
 SELECT @@local.character_set_database =
- (SELECT VARIABLE_VALUE FROM INFORMATION_SCHEMA.SESSION_VARIABLES
+ (SELECT VARIABLE_VALUE FROM performance_schema.session_variables
   WHERE VARIABLE_NAME='character_set_database') AS res;
 SELECT @@session.character_set_database =
- (SELECT VARIABLE_VALUE FROM INFORMATION_SCHEMA.SESSION_VARIABLES
+ (SELECT VARIABLE_VALUE FROM performance_schema.session_variables
   WHERE VARIABLE_NAME='character_set_database') AS res;
+--enable_warnings
 
 ####################################
 #     Restore initial value        #

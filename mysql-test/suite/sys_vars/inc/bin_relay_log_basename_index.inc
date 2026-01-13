@@ -11,7 +11,7 @@
 #     - relay_log_index
 #
 #   $rpl_debug
-#     See include/rpl_init.inc
+#     See include/rpl/init.inc
 
 if ($rpl_debug)
 {
@@ -38,11 +38,13 @@ if ($rpl_debug)
 --replace_result $basename REPLACED
 --eval show session variables like '$rpl_log_var_name'
 
+--disable_warnings
 --replace_result $basename REPLACED
---eval select * from information_schema.global_variables where variable_name='$rpl_log_var_name'
+--eval select * from performance_schema.global_variables where variable_name='$rpl_log_var_name'
 
 --replace_result $basename REPLACED
---eval select * from information_schema.session_variables where variable_name='$rpl_log_var_name'
+--eval select * from performance_schema.session_variables where variable_name='$rpl_log_var_name'
+--enable_warnings
 
 #
 # Assert it is read-only

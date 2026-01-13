@@ -8,9 +8,7 @@
 # - column COUNT_PROXY_USER_ERRORS
 # - column COUNT_PROXY_USER_ACL_ERRORS
 
---source include/not_embedded.inc
 --source include/have_debug.inc
---source include/have_perfschema.inc
 --source include/have_plugin_auth.inc
 
 # Enforce a clean state
@@ -52,7 +50,7 @@ connect (con3,"127.0.0.1",plug,plug_dest,test,$MASTER_MYPORT,,,auth_test_plugin)
 eval install plugin test_plugin_server soname '$PLUGIN_AUTH';
 
 --disable_query_log
---error ER_ACCESS_DENIED_ERROR
+--error ER_ACCESS_DENIED_NO_PROXY_GRANT
 connect (con2,"127.0.0.1",plug,plug_dest,test,$MASTER_MYPORT,,,auth_test_plugin);
 --enable_query_log
 
@@ -60,7 +58,7 @@ connect (con2,"127.0.0.1",plug,plug_dest,test,$MASTER_MYPORT,,,auth_test_plugin)
 --source ../include/hostcache_dump.inc
 
 --disable_query_log
---error ER_ACCESS_DENIED_ERROR
+--error ER_ACCESS_DENIED_NO_PROXY_GRANT
 connect (con3,"127.0.0.1",plug,plug_dest,test,$MASTER_MYPORT,,,auth_test_plugin);
 --enable_query_log
 

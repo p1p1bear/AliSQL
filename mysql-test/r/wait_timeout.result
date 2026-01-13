@@ -1,8 +1,8 @@
+SET @@global.log_error_verbosity= 3;
 SET @@global.wait_timeout= 2;
 disconnect default;
 connection wait_con;
 connection default;
---disable_reconnect;
 SELECT 1;
 1
 1
@@ -10,14 +10,12 @@ connection wait_con;
 connection default;
 SELECT 2;
 Got one of the listed errors
---enable_reconnect;
 SELECT 3;
 3
 3
 disconnection default;
 connection wait_con;
 connection con1;
---disable_reconnect;
 SELECT 1;
 1
 1
@@ -25,7 +23,6 @@ connection wait_con;
 connection con1;
 SELECT 2;
 Got one of the listed errors
---enable_reconnect;
 SELECT 3;
 3
 3
@@ -41,7 +38,6 @@ disconnection con1;
 SET @@SESSION.wait_timeout = 2;
 # Wait for con1 to be disconnected.
 # Check that con1 has been disconnected.
-# CR_SERVER_LOST, CR_SERVER_GONE_ERROR
 SELECT 1;
 Got one of the listed errors
 #
@@ -51,6 +47,14 @@ Got one of the listed errors
 SET @@SESSION.wait_timeout = 2;
 # Wait for con1 to be disconnected.
 # Check that con1 has been disconnected.
-# CR_SERVER_LOST, CR_SERVER_GONE_ERROR
+# Client interaction timeout
 SELECT 1;
 Got one of the listed errors
+SELECT "Check that we don't reconnect with reconnection disabled.";
+Got one of the listed errors
+# Must find the expected message in the error log
+SELECT COUNT(*) > 0 AS EXPECTED_LOG_MESSAGE_FOUND
+FROM performance_schema.error_log
+WHERE ERROR_CODE = 'MY-015123';
+EXPECTED_LOG_MESSAGE_FOUND
+1

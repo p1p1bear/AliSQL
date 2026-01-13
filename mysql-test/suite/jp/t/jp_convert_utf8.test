@@ -1,8 +1,3 @@
---source include/have_sjis.inc
---source include/have_ucs2.inc
---source include/have_ujis.inc
---source include/have_utf8.inc
---source include/have_innodb.inc
 --disable_warnings
 drop table if exists `Ｔ１`;
 drop table if exists `Ｔ２`;
@@ -16,21 +11,21 @@ drop table if exists `Ｔ９`;
 --enable_warnings
 
 #
-# Test CONVERT() function with Japanese character in utf8 encoding
+# Test CONVERT() function with Japanese character in utf8mb3 encoding
 #
 
-SET NAMES utf8;
-SET character_set_database = utf8;
+SET NAMES utf8mb3;
+SET character_set_database = utf8mb3;
 
-CREATE TABLE `Ｔ１` (`Ｃ１` char(20), INDEX(`Ｃ１`)) DEFAULT CHARSET = utf8 engine = innodb;
-CREATE TABLE `Ｔ２` (`Ｃ１` char(20), INDEX(`Ｃ１`)) DEFAULT CHARSET = utf8 engine = innodb;
-CREATE TABLE `Ｔ３` (`Ｃ１` char(20), INDEX(`Ｃ１`)) DEFAULT CHARSET = utf8 engine = innodb;
-CREATE TABLE `Ｔ４` (`Ｃ１` char(20), INDEX(`Ｃ１`)) DEFAULT CHARSET = utf8 engine = myisam;
-CREATE TABLE `Ｔ５` (`Ｃ１` char(20), INDEX(`Ｃ１`)) DEFAULT CHARSET = utf8 engine = myisam;
-CREATE TABLE `Ｔ６` (`Ｃ１` char(20), INDEX(`Ｃ１`)) DEFAULT CHARSET = utf8 engine = myisam;
-CREATE TABLE `Ｔ７` (`Ｃ１` char(20), INDEX(`Ｃ１`)) DEFAULT CHARSET = utf8 engine = MEMORY;
-CREATE TABLE `Ｔ８` (`Ｃ１` char(20), INDEX(`Ｃ１`)) DEFAULT CHARSET = utf8 engine = MEMORY;
-CREATE TABLE `Ｔ９` (`Ｃ１` char(20), INDEX(`Ｃ１`)) DEFAULT CHARSET = utf8 engine = MEMORY;
+CREATE TABLE `Ｔ１` (`Ｃ１` char(20), INDEX(`Ｃ１`)) DEFAULT CHARSET = utf8mb3 engine = innodb;
+CREATE TABLE `Ｔ２` (`Ｃ１` char(20), INDEX(`Ｃ１`)) DEFAULT CHARSET = utf8mb3 engine = innodb;
+CREATE TABLE `Ｔ３` (`Ｃ１` char(20), INDEX(`Ｃ１`)) DEFAULT CHARSET = utf8mb3 engine = innodb;
+CREATE TABLE `Ｔ４` (`Ｃ１` char(20), INDEX(`Ｃ１`)) DEFAULT CHARSET = utf8mb3 engine = myisam;
+CREATE TABLE `Ｔ５` (`Ｃ１` char(20), INDEX(`Ｃ１`)) DEFAULT CHARSET = utf8mb3 engine = myisam;
+CREATE TABLE `Ｔ６` (`Ｃ１` char(20), INDEX(`Ｃ１`)) DEFAULT CHARSET = utf8mb3 engine = myisam;
+CREATE TABLE `Ｔ７` (`Ｃ１` char(20), INDEX(`Ｃ１`)) DEFAULT CHARSET = utf8mb3 engine = MEMORY;
+CREATE TABLE `Ｔ８` (`Ｃ１` char(20), INDEX(`Ｃ１`)) DEFAULT CHARSET = utf8mb3 engine = MEMORY;
+CREATE TABLE `Ｔ９` (`Ｃ１` char(20), INDEX(`Ｃ１`)) DEFAULT CHARSET = utf8mb3 engine = MEMORY;
 
 #Load the following data in each table
 # jisx0201 hankaku-katakana data
@@ -48,38 +43,65 @@ CREATE TABLE `Ｔ９` (`Ｃ１` char(20), INDEX(`Ｃ１`)) DEFAULT CHARSET = utf
  LOAD DATA LOCAL INFILE 'suite/jp/std_data/jisx0212_utf8.dat' INTO TABLE `Ｔ９`;
 
 #InnoDB
+--sorted_result
 SELECT `Ｃ１`, CONVERT(`Ｃ１` using ujis) FROM `Ｔ１`;
+--sorted_result
 SELECT `Ｃ１`, CONVERT(`Ｃ１` using ucs2) FROM `Ｔ１`;
+--sorted_result
 SELECT `Ｃ１`, CONVERT(`Ｃ１` using sjis) FROM `Ｔ１`;
+--sorted_result
 SELECT `Ｃ１`, CONVERT(`Ｃ１` using ujis) FROM `Ｔ２`;
+--sorted_result
 SELECT `Ｃ１`, CONVERT(`Ｃ１` using ucs2) FROM `Ｔ２`;
+--sorted_result
 SELECT `Ｃ１`, CONVERT(`Ｃ１` using sjis) FROM `Ｔ２`;
+--sorted_result
 SELECT `Ｃ１`, CONVERT(`Ｃ１` using ujis) FROM `Ｔ３`;
+--sorted_result
 SELECT `Ｃ１`, CONVERT(`Ｃ１` using ucs2) FROM `Ｔ３`;
+--sorted_result
 # The result will get garbled because jisx0212 is not included in sjis
 SELECT `Ｃ１`, CONVERT(`Ｃ１` using sjis) FROM `Ｔ３`;
 
 #MyISAM
+--sorted_result
 SELECT `Ｃ１`, CONVERT(`Ｃ１` using ujis) FROM `Ｔ４`;
+--sorted_result
 SELECT `Ｃ１`, CONVERT(`Ｃ１` using ucs2) FROM `Ｔ４`;
+--sorted_result
 SELECT `Ｃ１`, CONVERT(`Ｃ１` using sjis) FROM `Ｔ４`;
+--sorted_result
 SELECT `Ｃ１`, CONVERT(`Ｃ１` using ujis) FROM `Ｔ５`;
+--sorted_result
 SELECT `Ｃ１`, CONVERT(`Ｃ１` using ucs2) FROM `Ｔ５`;
+--sorted_result
 SELECT `Ｃ１`, CONVERT(`Ｃ１` using sjis) FROM `Ｔ５`;
+--sorted_result
 SELECT `Ｃ１`, CONVERT(`Ｃ１` using ujis) FROM `Ｔ６`;
+--sorted_result
 SELECT `Ｃ１`, CONVERT(`Ｃ１` using ucs2) FROM `Ｔ６`;
+--sorted_result
 # The result will get garbled because jisx0212 is not included in sjis
 SELECT `Ｃ１`, CONVERT(`Ｃ１` using sjis) FROM `Ｔ６`;
 
 #MEMORY
+--sorted_result
 SELECT `Ｃ１`, CONVERT(`Ｃ１` using ujis) FROM `Ｔ７`;
+--sorted_result
 SELECT `Ｃ１`, CONVERT(`Ｃ１` using ucs2) FROM `Ｔ７`;
+--sorted_result
 SELECT `Ｃ１`, CONVERT(`Ｃ１` using sjis) FROM `Ｔ７`;
+--sorted_result
 SELECT `Ｃ１`, CONVERT(`Ｃ１` using ujis) FROM `Ｔ８`;
+--sorted_result
 SELECT `Ｃ１`, CONVERT(`Ｃ１` using ucs2) FROM `Ｔ８`;
+--sorted_result
 SELECT `Ｃ１`, CONVERT(`Ｃ１` using sjis) FROM `Ｔ８`;
+--sorted_result
 SELECT `Ｃ１`, CONVERT(`Ｃ１` using ujis) FROM `Ｔ９`;
+--sorted_result
 SELECT `Ｃ１`, CONVERT(`Ｃ１` using ucs2) FROM `Ｔ９`;
+--sorted_result
 # The result will get garbled because jisx0212 is not included in sjis
 SELECT `Ｃ１`, CONVERT(`Ｃ１` using sjis) FROM `Ｔ９`;
 

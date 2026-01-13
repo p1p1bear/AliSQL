@@ -1,3 +1,5 @@
+--source include/no_ps_protocol.inc
+
 SET @xml='<a aa1="aa1" aa2="aa2">a1<b ba1="ba1">b1<c>c1</c>b2</b>a2</a>';
 SELECT extractValue(@xml,'/a');
 SELECT extractValue(@xml,'/a/b');
@@ -296,8 +298,11 @@ select extractvalue('<a>A<b>B1</b><b>B2</b></a>','/a/b[count(.)=position()]');
 #
 select extractvalue('<a>Jack</a>','/a[contains(../a,"J")]');
 select extractvalue('<a>Jack</a>','/a[contains(../a,"j")]');
+
+set names latin1;
 select extractvalue('<a>Jack</a>','/a[contains(../a,"j")]' collate latin1_bin);
 select extractvalue('<a>Jack</a>' collate latin1_bin,'/a[contains(../a,"j")]');
+set names utf8mb4;
 
 #
 # Bug#18285: ExtractValue not returning character
@@ -336,7 +341,7 @@ select extractValue('<e><a>1</a></e>','/e/');
 #
 # Bug#16233: XML: ExtractValue() fails with special characters
 #
-set names utf8;
+set names utf8mb3;
 select extractValue('<Ñ><r>r</r></Ñ>','/Ñ/r');
 select extractValue('<r><Ñ>Ñ</Ñ></r>','/r/Ñ');
 select extractValue('<Ñ r="r"/>','/Ñ/@r');
@@ -347,7 +352,7 @@ DROP PROCEDURE IF EXISTS p2;
 DELIMITER //;
 CREATE PROCEDURE p2 ()
 BEGIN
- DECLARE p LONGTEXT CHARACTER SET UTF8 DEFAULT '<Ñ><r>A</r></Ñ>';
+ DECLARE p LONGTEXT CHARACTER SET utf8mb3 DEFAULT '<Ñ><r>A</r></Ñ>';
  SELECT EXTRACTVALUE(p,'/Ñ/r');
 END//
 DELIMITER ;//
@@ -456,6 +461,7 @@ select ExtractValue('<a><self>test</self></a>', '/a/self');
 # Bug#26518 XPath and variables problem
 # Check with user defined variables
 #
+SET sql_mode = 'NO_ENGINE_SUBSTITUTION';
 set @i=1;
 select ExtractValue('<a><b>b1</b><b>b2</b></a>','/a/b[$@i]');
 set @i=2;
@@ -523,7 +529,7 @@ CALL spxml('<a><b>b1</b><b>b2</b></a>', '1 and string');
 CALL spxml('<a><b>b1</b><b>b2</b></a>', 'string and 1');
 CALL spxml('<a><b>b1</b><b>b2</b></a>', 'string');
 DROP PROCEDURE spxml;
-
+SET sql_mode = default;
 #
 # Bug#28558 UpdateXML called with garbage crashes server
 #
@@ -597,7 +603,7 @@ CREATE TABLE IF NOT EXISTS t1 (
   id int(10) unsigned NOT NULL AUTO_INCREMENT,
   xml text,
   PRIMARY KEY (id)
-) ENGINE=MyISAM;
+);
 
 INSERT INTO t1 (id, xml) VALUES
 (15, '<?xml version="1.0"?><bla name="blubb"></bla>'),
@@ -621,7 +627,7 @@ DROP TABLE t1;
 --echo #
 --echo # Bug#57257 Replace(ExtractValue(...)) causes MySQL crash
 --echo #
-SET NAMES utf8;
+SET NAMES utf8mb3;
 SELECT REPLACE(EXTRACTVALUE('1', '/a'),'ds','');
 
 
@@ -643,8 +649,8 @@ SELECT EXTRACTVALUE('', LPAD(0.1111E-15, '2011', 1));
 --echo #
 --echo # Bug #44332 	my_xml_scan reads behind the end of buffer
 --echo #
-SELECT UPDATEXML(CONVERT(_latin1'<' USING utf8),'1','1');
-SELECT UPDATEXML(CONVERT(_latin1'<!--' USING utf8),'1','1');
+SELECT UPDATEXML(CONVERT(_latin1'<' USING utf8mb3),'1','1');
+SELECT UPDATEXML(CONVERT(_latin1'<!--' USING utf8mb3),'1','1');
 
 --echo #
 --echo # Bug#11766725 (bug#59901): EXTRACTVALUE STILL BROKEN AFTER FIX FOR BUG #44332
@@ -681,9 +687,9 @@ SELECT ExtractValue('<a><a>aa</a><b>bb</b></a>','(a)/a|(a)/b');
 --echo # Bug#13358486 WEIGHT_STRING = MY_STRNXFRM_UNICODE:
 --echo #              ASSERTION `SRC' FAILED
 --echo #
-set names utf8;
-do weight_string(extractvalue('','/*/a') level 1 reverse);
-do char((weight_string(extractvalue((''),('tX')) level 7 desc)) using cp852);
+set names utf8mb3;
+do weight_string(extractvalue('','/*/a'));
+do char((weight_string(extractvalue((''),('tX')))) using cp852);
 set names default;
 
 --echo #
@@ -695,3 +701,10 @@ set @x = '<MESSAGE><DATA1>HOLA</DATA1></MESSAGE>';
 set @y = 'Default Value';
 select ExtractValue( @x, '/MESSAGE/DATA2' ) into @y;
 select @y;
+
+
+--echo #
+--echo # Bug#36236440 Encoding problem in xpath comparision
+--echo #
+
+SELECT EXTRACTVALUE('<A><B>èè</B><C>AA</C></A>', '/A[B = "èè"]/C');

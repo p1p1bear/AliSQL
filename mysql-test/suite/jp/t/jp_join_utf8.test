@@ -1,5 +1,3 @@
---source include/have_utf8.inc
---source include/have_innodb.inc
 --disable_warnings
 drop table if exists `Ｔ１a`;
 drop table if exists `Ｔ１b`;
@@ -22,30 +20,30 @@ drop table if exists `Ｔ９b`;
 --enable_warnings
 
 #
-# Test table JOIN using Japanese characters in utf8
+# Test table JOIN using Japanese characters in utf8mb3
 #
 
-SET NAMES utf8;
-SET character_set_database = utf8;
+SET NAMES utf8mb3;
+SET character_set_database = utf8mb3;
 
-CREATE TABLE `Ｔ１a` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8 engine = InnoDB;
-CREATE TABLE `Ｔ１b` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8 engine = InnoDB;
-CREATE TABLE `Ｔ２a` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8 engine = InnoDB;
-CREATE TABLE `Ｔ２b` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8 engine = InnoDB;
-CREATE TABLE `Ｔ３a` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8 engine = InnoDB;
-CREATE TABLE `Ｔ３b` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8 engine = InnoDB;
-CREATE TABLE `Ｔ４a` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8 engine = MyISAM;
-CREATE TABLE `Ｔ４b` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8 engine = MyISAM;
-CREATE TABLE `Ｔ５a` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8 engine = MyISAM;
-CREATE TABLE `Ｔ５b` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8 engine = MyISAM;
-CREATE TABLE `Ｔ６a` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8 engine = MyISAM;
-CREATE TABLE `Ｔ６b` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8 engine = MyISAM;
-CREATE TABLE `Ｔ７a` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8 engine = MEMORY;
-CREATE TABLE `Ｔ７b` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8 engine = MEMORY;
-CREATE TABLE `Ｔ８a` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8 engine = MEMORY;
-CREATE TABLE `Ｔ８b` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8 engine = MEMORY;
-CREATE TABLE `Ｔ９a` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8 engine = MEMORY;
-CREATE TABLE `Ｔ９b` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8 engine = MEMORY;
+CREATE TABLE `Ｔ１a` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8mb3 engine = InnoDB;
+CREATE TABLE `Ｔ１b` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8mb3 engine = InnoDB;
+CREATE TABLE `Ｔ２a` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8mb3 engine = InnoDB;
+CREATE TABLE `Ｔ２b` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8mb3 engine = InnoDB;
+CREATE TABLE `Ｔ３a` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8mb3 engine = InnoDB;
+CREATE TABLE `Ｔ３b` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8mb3 engine = InnoDB;
+CREATE TABLE `Ｔ４a` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8mb3 engine = MyISAM;
+CREATE TABLE `Ｔ４b` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8mb3 engine = MyISAM;
+CREATE TABLE `Ｔ５a` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8mb3 engine = MyISAM;
+CREATE TABLE `Ｔ５b` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8mb3 engine = MyISAM;
+CREATE TABLE `Ｔ６a` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8mb3 engine = MyISAM;
+CREATE TABLE `Ｔ６b` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8mb3 engine = MyISAM;
+CREATE TABLE `Ｔ７a` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8mb3 engine = MEMORY;
+CREATE TABLE `Ｔ７b` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8mb3 engine = MEMORY;
+CREATE TABLE `Ｔ８a` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8mb3 engine = MEMORY;
+CREATE TABLE `Ｔ８b` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8mb3 engine = MEMORY;
+CREATE TABLE `Ｔ９a` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8mb3 engine = MEMORY;
+CREATE TABLE `Ｔ９b` (`Ｃ１` char(1) PRIMARY KEY) DEFAULT CHARSET = utf8mb3 engine = MEMORY;
 
 #insert the following data in each table
 # jisx0201 hankaku-katakana data

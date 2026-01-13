@@ -1,9 +1,6 @@
-source include/have_innodb.inc;
-source include/not_embedded.inc;
 source include/have_profiling.inc;
 
 SET GLOBAL EVENT_SCHEDULER = OFF;
-SET BINLOG_FORMAT = STATEMENT;
 
 LET $OLD_DB= `SELECT DATABASE()`;
 
@@ -11,7 +8,7 @@ CREATE DATABASE db1;
 USE db1;
 CREATE TABLE t1 (a INT, KEY a(a)) ENGINE=INNODB;
 INSERT INTO t1 VALUES (1),(2),(3),(4),(5);
-CREATE TABLE t3 (a INT) ENGINE=MyISAM;
+CREATE TABLE t3 (a INT) ENGINE=InnoDB;
 INSERT INTO t3 SELECT * FROM t1;
 CREATE TABLE trans (a INT) ENGINE=INNODB;
 
@@ -283,6 +280,14 @@ let $statement=
 source include/implicit_commit_helper.inc;
 
 --echo #
+--echo # SQLCOM_SHOW_STATUS_LIBRARY
+--echo #
+
+let $statement=
+  show library status where (1) in (select * from t1);
+source include/implicit_commit_helper.inc;
+
+--echo #
 --echo # SQLCOM_SHOW_STATUS_PROC
 --echo #
 
@@ -427,7 +432,7 @@ drop temporary table t4;
 --echo #
 
 let $statement=
-  show master status;
+  show binary log status;
 source include/implicit_commit_helper.inc;
 
 --echo #
@@ -435,13 +440,14 @@ source include/implicit_commit_helper.inc;
 --echo #
 
 let $statement=
-  show slave status;
+  SHOW REPLICA STATUS;
 source include/implicit_commit_helper.inc;
 
 --echo #
 --echo # SQLCOM_GRANT
 --echo #
 
+create user mysqltest_2@localhost;
 let $statement=
   grant all on test.t1 to mysqltest_2@localhost with grant option;
 source include/implicit_commit_helper.inc;
@@ -533,14 +539,6 @@ source include/implicit_commit_helper.inc;
 
 #let $statement=
 #  alter database db2 collate cp1251_general_cs;
-#source include/implicit_commit_helper.inc;
-
---echo #
---echo # SQLCOM_ALTER_DB_UPGRADE
---echo #
-
-#let $statement=
-#  alter database `#mysql50#db3` upgrade data directory name;
 #source include/implicit_commit_helper.inc;
 
 --echo #
@@ -663,11 +661,11 @@ source include/implicit_commit_helper.inc;
 --echo #
 
 --echo #
---echo # SQLCOM_SLAVE_START
+--echo # SQLCOM_REPLICA_START
 --echo #
 
 --echo #
---echo # SQLCOM_SLAVE_STOP
+--echo # SQLCOM_REPLICA_STOP
 --echo #
 
 --echo #
@@ -679,7 +677,7 @@ let $statement=
 source include/implicit_commit_helper.inc;
 
 --echo #
---echo # SQLCOM_CHANGE_MASTER
+--echo # SQLCOM_CHANGE_REPLICATION_SOURCE
 --echo #
 
 --echo #
@@ -692,14 +690,6 @@ source include/implicit_commit_helper.inc;
 
 let $statement=
   rename table t4 to t3;
-source include/implicit_commit_helper.inc;
-
---echo #
---echo # SQLCOM_RESET
---echo #
-
-let $statement=
-  reset query cache;
 source include/implicit_commit_helper.inc;
 
 --echo #
@@ -743,7 +733,7 @@ source include/implicit_commit_helper.inc;
 --echo #
 
 let $statement=
-  show slave hosts;
+  SHOW REPLICAS;
 source include/implicit_commit_helper.inc;
 
 --echo #
@@ -1018,6 +1008,15 @@ source include/implicit_commit_helper.inc;
 --echo # SQLCOM_ALTER_TABLESPACE
 --echo #
 
+let $statement=
+  CREATE TABLESPACE ts1 ADD DATAFILE './ts1.ibd' ENGINE=INNODB;
+source include/implicit_commit_helper.inc;
+
+let $statement=
+  DROP TABLESPACE ts1;
+source include/implicit_commit_helper.inc;
+
+
 --echo #
 --echo # SQLCOM_INSTALL_PLUGIN
 --echo #
@@ -1148,4 +1147,6 @@ DROP TABLE t3;
 eval USE $OLD_DB;
 DROP DATABASE db1;
 
+SET GLOBAL EVENT_SCHEDULER = ON;
+--source include/running_event_scheduler.inc
 --echo End of tests

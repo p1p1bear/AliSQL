@@ -15,7 +15,6 @@
 #                   Create this script based on older scripts and new code.
 # Last Change:
 # 2008-06-11 mleich Move t/is_schemata.test to this file and
-#                   create variants for embedded/non embedded server.
 #
 
 let $is_table = SCHEMATA;
@@ -59,7 +58,8 @@ eval SHOW COLUMNS FROM information_schema.$is_table;
 # Show that CATALOG_NAME and SQL_PATH are always NULL.
 SELECT catalog_name, schema_name, sql_path
 FROM information_schema.schemata
-WHERE catalog_name IS NOT NULL or sql_path IS NOT NULL;
+WHERE catalog_name IS NOT NULL or sql_path IS NOT NULL
+ORDER BY schema_name;
 
 
 --echo ###############################################################################
@@ -78,8 +78,8 @@ WHERE catalog_name IS NOT NULL or sql_path IS NOT NULL;
 DROP DATABASE IF EXISTS db_datadict_1;
 DROP DATABASE IF EXISTS db_datadict_2;
 --enable_warnings
-CREATE DATABASE db_datadict_1;
-CREATE DATABASE db_datadict_2;
+CREATE DATABASE db_datadict_1 charset latin1;
+CREATE DATABASE db_datadict_2 charset latin1;
 
 --error 0,ER_CANNOT_USER
 DROP   USER 'testuser1'@'localhost';
@@ -164,7 +164,7 @@ SELECT * FROM information_schema.schemata WHERE schema_name = 'db_datadict';
 # Check modify default CHARACTER SET
 SELECT schema_name, default_character_set_name
 FROM information_schema.schemata WHERE schema_name = 'db_datadict';
-ALTER SCHEMA db_datadict CHARACTER SET 'utf8';
+ALTER SCHEMA db_datadict CHARACTER SET 'utf8mb3';
 SELECT schema_name, default_character_set_name
 FROM information_schema.schemata WHERE schema_name = 'db_datadict';
 ALTER SCHEMA db_datadict CHARACTER SET 'latin1';
@@ -216,9 +216,7 @@ let $my_error_message =
 ##### The previous statement must fail ######
 # Server type  | expected error name      | expected error message
 # --------------------------------------------------------------------------------------------------------------------
-# not embedded | ER_DBACCESS_DENIED_ERROR | ERROR 42000: Access denied for user 'root'@'localhost' to database 'information_schema'
-# embedded     | ER_NON_INSERTABLE_TABLE  | ERROR HY000: The target table schemata of the INSERT is not insertable-into
-#              | or similar               |              or similar
+# MySQL | ER_DBACCESS_DENIED_ERROR | ERROR 42000: Access denied for user 'root'@'localhost' to database 'information_schema'
 ;
 
 --disable_abort_on_error
@@ -238,7 +236,7 @@ if (!$mysql_errno)
    exit;
 }
 UPDATE information_schema.schemata
-SET default_character_set_name = 'utf8'
+SET default_character_set_name = 'utf8mb3'
 WHERE schema_name = 'db_datadict';
 if (!$mysql_errno)
 {

@@ -1,3 +1,4 @@
+
 # Last modification:
 # 2009-01-19 H.Hunger Fix Bug#39108 main.wait_timeout fails sporadically
 #                       - Increase wait timeout to 2 seconds
@@ -6,12 +7,11 @@
 #                       - Replaced sleeps by wait condition
 #                       - Minor improvements
 ###############################################################################
-# These tests cannot run with the embedded server
--- source include/not_embedded.inc
 -- source include/one_thread_per_connection.inc
 
 # Save the initial number of concurrent sessions
 --source include/count_sessions.inc
+SET @@global.log_error_verbosity= 3;
 
 #
 # Bug#8731 wait_timeout does not work on Mac OS X
@@ -32,12 +32,10 @@ let $retries=300;
 SET @aborted_clients= 0;
 --enable_query_log
 
-# Disable reconnect and do the query
+# Do the query
 connect (default,localhost,root,,test,,);
 --echo connection default;
 connection default;
---echo --disable_reconnect;
---disable_reconnect
 SELECT 1;
 
 # Switch to wait_con and wait until server has aborted the connection
@@ -46,7 +44,7 @@ SELECT 1;
 connection wait_con;
 while (!`select @aborted_clients`)
 {
-  real_sleep 0.1;
+  sleep 0.1;
   let $aborted_clients = `SHOW STATUS LIKE 'aborted_clients'`;
   eval SET @aborted_clients= SUBSTRING('$aborted_clients', 16)+0;
 
@@ -59,17 +57,16 @@ while (!`select @aborted_clients`)
 --enable_query_log
 # The server has disconnected, add small sleep to make sure
 # the disconnect has reached client
-let $wait_condition= SELECT COUNT(*)=1 FROM information_schema.processlist;
+let $wait_condition= SELECT COUNT(*)=2 FROM information_schema.processlist;
 --source include/wait_condition.inc
 --echo connection default;
 connection default;
 # When the connection is closed in this way, the error code should
 # be consistent see Bug#2845 for an explanation
 # depending on platform/client, either errno 2006 or 2013 can occur below
---error 2006,2013
+--error ER_CLIENT_INTERACTION_TIMEOUT,CR_SERVER_LOST
 SELECT 2;
---echo --enable_reconnect;
---enable_reconnect
+connect;
 SELECT 3;
 # Disconnect so that we will not be confused by a future abort from this
 # connection.
@@ -91,8 +88,6 @@ SET @aborted_clients= 0;
 
 --echo connection con1;
 connect (con1,127.0.0.1,root,,test,$MASTER_MYPORT,);
---echo --disable_reconnect;
---disable_reconnect
 SELECT 1;
 
 # Switch to wait_con and wait until server has aborted the connection
@@ -101,7 +96,7 @@ SELECT 1;
 connection wait_con;
 while (!`select @aborted_clients`)
 {
-  real_sleep 0.1;
+  sleep 0.1;
   let $aborted_clients = `SHOW STATUS LIKE 'aborted_clients'`;
   eval SET @aborted_clients= SUBSTRING('$aborted_clients', 16)+0;
 
@@ -114,7 +109,7 @@ while (!`select @aborted_clients`)
 --enable_query_log
 # The server has disconnected, add small sleep to make sure
 # the disconnect has reached client
-let $wait_condition= SELECT COUNT(*)=1 FROM information_schema.processlist;
+let $wait_condition= SELECT COUNT(*)=2 FROM information_schema.processlist;
 --source include/wait_condition.inc
 disconnect wait_con;
 
@@ -123,10 +118,9 @@ connection con1;
 # When the connection is closed in this way, the error code should
 # be consistent see Bug#2845 for an explanation
 # depending on platform/client, either errno 2006 or 2013 can occur below
---error 2006,2013
+--error ER_CLIENT_INTERACTION_TIMEOUT,CR_SERVER_LOST
 SELECT 2;
---echo --enable_reconnect;
---enable_reconnect
+connect;
 SELECT 3;
 --replace_result $start_value <start_value>
 eval SET @@global.wait_timeout= $start_value;
@@ -160,8 +154,7 @@ let $wait_condition=
 
 --echo # Check that con1 has been disconnected.
 connection con1;
---echo # CR_SERVER_LOST, CR_SERVER_GONE_ERROR
---error 2006,2013
+--error ER_CLIENT_INTERACTION_TIMEOUT,CR_SERVER_LOST
 SELECT 1;
 
 disconnect con1;
@@ -172,7 +165,7 @@ connection default;
 --echo #
 
 --echo # Open con1 and set a timeout.
-connect(con1,127.0.0.1,root,,);
+connect(con1,127.0.0.1,root,,,,,TCP,,);
 
 LET $ID= `SELECT connection_id()`;
 SET @@SESSION.wait_timeout = 2;
@@ -186,13 +179,21 @@ let $wait_condition=
 
 --echo # Check that con1 has been disconnected.
 connection con1;
---echo # CR_SERVER_LOST, CR_SERVER_GONE_ERROR
---error 2006,2013
+--echo # Client interaction timeout
+--error ER_CLIENT_INTERACTION_TIMEOUT,CR_SERVER_LOST
 SELECT 1;
 
-disconnect con1;
-connection default;
+--error ER_CLIENT_INTERACTION_TIMEOUT,CR_SERVER_LOST
+SELECT "Check that we don't reconnect with reconnection disabled.";
 
+connection default;
+disconnect con1;
 # Wait till all disconnects are completed
 --source include/wait_until_count_sessions.inc
-
+#
+# Bug #28940167 WAIT_TIMEOUT ERROR NOT CLEAR AND NOT SENT TO CLIENT BEFORE CLOSING CONNECTION
+#
+--echo # Must find the expected message in the error log
+SELECT COUNT(*) > 0 AS EXPECTED_LOG_MESSAGE_FOUND
+FROM performance_schema.error_log
+WHERE ERROR_CODE = 'MY-015123';
