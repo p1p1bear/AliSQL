@@ -490,12 +490,28 @@ int DeltaAppender::append_mysql_field(const Field *field,
 
     case MYSQL_TYPE_DATETIME2: {
       MYSQL_TIME tm;
-      static_cast<const Field_datetimef *>(field)->get_date(&tm, TIME_FUZZY_DATE);
-      bool not_used;
-      longlong sec = my_tz_UTC->TIME_to_gmt_sec(&tm, &not_used);
-      // write_batch_longlong(col_index, &value);
+      static_cast<const Field_datetimef *>(field)->get_date(&tm,
+                                                            TIME_FUZZY_DATE);
+      longlong ts_us;
+      if (tm.month == 0) {
+        /*
+          Zero date (e.g. 0000-00-00 00:00:00) or invalid date with month=0.
+          Bypass TIME_to_gmt_sec() which asserts month > 0.
+          Use calc_daynr() to compute timestamp directly, consistent with
+          MYSQL_TYPE_NEWDATE handling.
+        */
+        long days =
+            calc_daynr(tm.year, tm.month, tm.day) - myduck::days_at_timestart;
+        ts_us = static_cast<longlong>(days) * 86400LL * 1000000LL +
+                tm.hour * 3600LL * 1000000LL + tm.minute * 60LL * 1000000LL +
+                tm.second * 1000000LL + tm.second_part;
+      } else {
+        bool not_used;
+        longlong sec = my_tz_UTC->TIME_to_gmt_sec(&tm, &not_used);
+        ts_us = sec * 1000000LL + tm.second_part;
+      }
       appender->Append<duckdb::timestamp_t>(
-          static_cast<duckdb::timestamp_t>(sec * 1000000 + tm.second_part));
+          static_cast<duckdb::timestamp_t>(ts_us));
       break;
     }
 
