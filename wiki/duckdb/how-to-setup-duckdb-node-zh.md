@@ -238,8 +238,8 @@ duckdb_mode=ON
 duckdb_require_primary_key=ON
 force_innodb_to_duckdb=ON
 
-dml_in_batch=ON
-update_modified_column_only=ON
+duckdb_dml_in_batch=ON
+duckdb_update_modified_column_only=ON
 duckdb_multi_trx_in_batch=ON
 duckdb_multi_trx_timeout=5000
 duckdb_multi_trx_max_batch_length=268435456
