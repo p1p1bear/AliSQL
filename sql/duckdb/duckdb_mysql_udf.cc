@@ -51,6 +51,7 @@ bool mysql_json_overlaps(duckdb::string_t json1, duckdb::string_t json2) {
   Item_duckdb_string item_json1(json1);
   Item_duckdb_string item_json2(json2);
   Item_func_json_overlaps json_overlaps(POS(), &item_json1, &item_json2);
+  json_overlaps.m_caller_is_duckdb = true;
   json_overlaps.fixed = true;
   return json_overlaps.val_int();
 }
@@ -59,6 +60,7 @@ int64_t mysql_json_depth(duckdb::string_t json) {
   Item_duckdb_string item_json(json);
   Item_func_json_depth json_depth(POS(), &item_json);
   json_depth.fixed = true;
+  json_depth.m_caller_is_duckdb = true;
   return json_depth.val_int();
 }
 
@@ -80,6 +82,7 @@ void mysql_json_unquote(duckdb::DataChunk &input,
       Item_duckdb_string item_json(*ldata);
       Item_func_json_unquote json_unquote(POS(), &item_json);
       json_unquote.fixed = true;
+      json_unquote.m_caller_is_duckdb = true;
       String tmp;
       String *func_result = json_unquote.val_str(&tmp);
       if (json_unquote.null_value) {
@@ -109,6 +112,7 @@ void mysql_json_unquote(duckdb::DataChunk &input,
       Item_duckdb_string item_json(data[i]);
       Item_func_json_unquote json_unquote(POS(), &item_json);
       json_unquote.fixed = true;
+      json_unquote.m_caller_is_duckdb = true;
       String tmp;
       String *func_result = json_unquote.val_str(&tmp);
       if (json_unquote.null_value) {

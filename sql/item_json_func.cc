@@ -73,6 +73,7 @@
 #include "sql/thd_raii.h"
 #include "sql/thr_malloc.h"
 #include "template_utils.h"  // down_cast
+#include "duckdb/common/exception.hpp"
 
 class PT_item_list;
 
@@ -304,7 +305,8 @@ static bool check_convertible_to_json(const Item *item, int argument_number,
 */
 static bool json_is_valid(Item **args, uint arg_idx, String *value,
                           const char *func_name, Json_dom_ptr *dom,
-                          bool require_str_or_json, bool *valid) {
+                          bool require_str_or_json, bool *valid,
+                          bool caller_is_duckdb = false) {
   Item *const arg_item = args[arg_idx];
 
   enum_field_types field_type = get_normalized_field_type(arg_item);
@@ -312,6 +314,9 @@ static bool json_is_valid(Item **args, uint arg_idx, String *value,
   if (!is_convertible_to_json(arg_item)) {
     if (require_str_or_json) {
       *valid = false;
+      if (caller_is_duckdb) {
+        throw duckdb::InvalidInputException("Invalid input in json func");
+      }
       my_error(ER_INVALID_TYPE_FOR_JSON, MYF(0), arg_idx + 1, func_name);
       return true;
     }
@@ -330,7 +335,9 @@ static bool json_is_valid(Item **args, uint arg_idx, String *value,
     return !*valid;
   } else {
     String *const res = arg_item->val_str(value);
-    if (current_thd->is_error()) return true;
+    if (!caller_is_duckdb) {
+      if (current_thd->is_error()) return true;
+    }
 
     if (arg_item->null_value) {
       *valid = true;
@@ -340,8 +347,11 @@ static bool json_is_valid(Item **args, uint arg_idx, String *value,
     bool parse_error = false;
     const bool failure = parse_json(
         *res, dom, require_str_or_json,
-        [&parse_error, arg_idx, func_name](const char *parse_err,
-                                           size_t err_offset) {
+        [&parse_error, arg_idx, func_name, caller_is_duckdb](
+            const char *parse_err, size_t err_offset) {
+          if (caller_is_duckdb) {
+            throw duckdb::InvalidInputException("Invalid input in json func");
+          }
           my_error(ER_INVALID_JSON_TEXT_IN_PARAM, MYF(0), arg_idx + 1,
                    func_name, parse_err, err_offset, "");
           parse_error = true;
@@ -1084,7 +1094,8 @@ bool json_value(Item *arg, Json_wrapper *result, bool *has_value) {
 }
 
 bool get_json_wrapper(Item **args, uint arg_idx, String *str,
-                      const char *func_name, Json_wrapper *wrapper) {
+                      const char *func_name, Json_wrapper *wrapper,
+                      bool caller_is_duckdb) {
   Item *const arg = args[arg_idx];
 
   bool has_value;
@@ -1104,10 +1115,14 @@ bool get_json_wrapper(Item **args, uint arg_idx, String *str,
   Json_dom_ptr dom;  //@< we'll receive a DOM here from a successful text parse
 
   bool valid;
-  if (json_is_valid(args, arg_idx, str, func_name, &dom, true, &valid))
+  if (json_is_valid(args, arg_idx, str, func_name, &dom, true, &valid,
+                    caller_is_duckdb))
     return true;
 
   if (!valid) {
+    if (caller_is_duckdb) {
+      throw duckdb::InvalidInputException("Invalid input in json func");
+    }
     my_error(ER_INVALID_TYPE_FOR_JSON, MYF(0), arg_idx + 1, func_name);
     return true;
   }
@@ -1743,10 +1758,13 @@ longlong Item_func_json_depth::val_int() {
   Json_wrapper wrapper;
 
   try {
-    if (get_json_wrapper(args, 0, &m_doc_value, func_name(), &wrapper))
+    if (get_json_wrapper(args, 0, &m_doc_value, func_name(), &wrapper, m_caller_is_duckdb))
       return error_int();
   } catch (...) {
     /* purecov: begin inspected */
+    if (m_caller_is_duckdb) {
+      throw duckdb::InvalidInputException("Invalid input in json func");
+    }
     handle_std_exception(func_name());
     return error_int();
     /* purecov: end */
@@ -3249,7 +3267,7 @@ String *Item_func_json_unquote::val_str(String *str) {
   try {
     if (args[0]->data_type() == MYSQL_TYPE_JSON) {
       Json_wrapper wr;
-      if (get_json_wrapper(args, 0, str, func_name(), &wr)) {
+      if (get_json_wrapper(args, 0, str, func_name(), &wr, m_caller_is_duckdb)) {
         return error_str();
       }
 
@@ -3260,8 +3278,13 @@ String *Item_func_json_unquote::val_str(String *str) {
 
       m_value.length(0);
 
-      if (wr.to_string(&m_value, false, func_name(),
-                       JsonDocumentDefaultDepthHandler)) {
+      if (m_caller_is_duckdb) {
+        if (wr.to_string(&m_value, false, func_name(),
+                         JsonDocumentDefaultDepthHandlerDuckDB)) {
+          return error_str();
+        }
+      } else if (wr.to_string(&m_value, false, func_name(),
+                              JsonDocumentDefaultDepthHandler)) {
         return error_str();
       }
 
@@ -3317,6 +3340,7 @@ String *Item_func_json_unquote::val_str(String *str) {
 
     Json_dom_ptr dom;
     JsonParseDefaultErrorHandler parse_handler(func_name(), 0);
+    parse_handler.m_caller_is_duckdb = m_caller_is_duckdb;
     if (parse_json(*utf8str, &dom, true, parse_handler,
                    JsonDocumentDefaultDepthHandler)) {
       return error_str();
@@ -3331,6 +3355,9 @@ String *Item_func_json_unquote::val_str(String *str) {
       return error_str(); /* purecov: inspected */
   } catch (...) {
     /* purecov: begin inspected */
+    if (m_caller_is_duckdb) {
+      throw duckdb::InvalidInputException("Invalid input in json func");
+    }
     handle_std_exception(func_name());
     return error_str();
     /* purecov: end */
@@ -3857,14 +3884,16 @@ longlong Item_func_json_overlaps::val_int() {
     Json_wrapper *doc_b = &wr_b;
 
     // arg 0 is the document 1
-    if (get_json_wrapper(args, 0, &m_doc_value, func_name(), doc_a) ||
+    if (get_json_wrapper(args, 0, &m_doc_value, func_name(), doc_a,
+                         m_caller_is_duckdb) ||
         args[0]->null_value) {
       null_value = true;
       return 0;
     }
 
     // arg 1 is the document 2
-    if (get_json_wrapper(args, 1, &m_doc_value, func_name(), doc_b) ||
+    if (get_json_wrapper(args, 1, &m_doc_value, func_name(), doc_b,
+                         m_caller_is_duckdb) ||
         args[1]->null_value) {
       null_value = true;
       return 0;
@@ -3913,6 +3942,9 @@ longlong Item_func_json_overlaps::val_int() {
     }
     /* purecov: begin inspected */
   } catch (...) {
+    if (m_caller_is_duckdb) {
+      throw duckdb::InvalidInputException("Invalid invalid in json func");
+    }
     handle_std_exception(func_name());
     return error_int();
     /* purecov: end */
